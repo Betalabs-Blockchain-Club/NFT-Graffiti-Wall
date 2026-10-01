@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+.env
+!.env.example
+data.db*
+*.sqlite*
+coverage/
+playwright-report/
+.DS_Store
+# hardhat
+artifacts/
+cache/
+typechain-types/
+# uploads (expo local cache, never commit art)
+backend/uploads/
+backend/data/

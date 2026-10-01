@@ -1,0 +1,48 @@
+# AGENT.md — `web-admin/` (Moderation & Ops)
+
+## 1. Purpose / Function
+Staff-only control room: approve/hide art before it hits the public wall, monitor mint health + wallet balance, flip network mode / kill switch, reset day. Speed matters — hide in <2 clicks.
+
+## 2. Inputs
+- `GET /api/gallery?status=pending|minted` (queue), `GET /api/health`, `GET /api/leaderboard`.
+- Actions (Bearer `ADMIN_TOKEN`): `POST /api/admin/artworks/:id/approve|hide`, `POST /api/admin/reset`, `PUT /api/admin/config {MODERATION_MODE, KILL_SWITCH}`.
+- Env: `VITE_API_URL`.
+
+## 3. Outputs
+- Moderation decisions → backend DB `approved|hidden` → gallery WS `new|hide`.
+- Ops signals: queue depth, failed jobs (retry button), balance warning, network mode indicator.
+
+## 4. Functions / Responsibilities
+1. `pages/Queue.tsx` — pending grid with big Approve/Hide, nickname filter highlight.
+2. `components/NetworkSwitch.tsx` — `pinata|kubo`, `testnet|localhost` (via backend config).
+3. `components/QueueHealth.tsx` — depth, stages, last error, balance.
+4. Auth: store `ADMIN_TOKEN` in memory (not localStorage on shared laptop), auto-lock after 5 min.
+5. Reset flow requires typed confirm ("ARCHIVE 2026-10-01").
+
+## 5. Interfaces
+- Only writer of moderation states. Gallery/kiosk never change status.
+- Changing admin endpoints = update here + `docs/api.md`.
+
+## 6. Dependencies
+- React + Vite + TS, Tailwind. Same backend as kiosk/gallery.
+
+## 7. File layout
+```text
+web-admin/
+├── AGENT.md
+├── src/pages/Queue.tsx
+├── src/pages/Dashboard.tsx
+└── src/components/NetworkSwitch.tsx
+```
+
+## 8. Definition of Done
+- [ ] Hide removes from gallery in <3s. Approve shows in <3s.
+- [ ] Kill switch blocks POST but not GET. Balance <0.01 test-ETH shows red banner.
+- [ ] Non-authed user gets 401 on all admin calls.
+
+## 9. Non-goals
+- No drawing, no public access. Never exposed on projector.
+
+## 10. Member guide
+1. `npm run dev` with `ADMIN_TOKEN` from backend `.env`.
+2. Test with 2 browsers: admin hide → gallery disappears.

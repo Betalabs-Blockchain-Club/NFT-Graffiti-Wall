@@ -1,0 +1,32 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "3001:3001"
+    env_file: .env
+    depends_on:
+      - hardhat
+      - kubo
+    volumes:
+      - ./backend/data:/app/data
+
+  hardhat:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./contracts:/app
+    command: sh -c "npm install && npx hardhat node --hostname 0.0.0.0"
+    ports:
+      - "8545:8545"
+
+  kubo:
+    image: ipfs/kubo:latest
+    ports:
+      - "5001:5001"
+      - "8080:8080"
+      - "4001:4001"
+    volumes:
+      - kubo-data:/data/ipfs
+
+volumes:
+  kubo-data:

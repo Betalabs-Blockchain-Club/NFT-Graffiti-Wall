@@ -1,0 +1,21 @@
+{
+  "name": "nft-graffiti-wall",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Draw -> Hash -> IPFS -> Mint -> Verify -> Live Gallery (TechFest expo)",
+  "workspaces": [
+    "contracts",
+    "backend",
+    "web-kiosk",
+    "web-gallery",
+    "web-verify",
+    "web-admin",
+    "shared"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces",
+    "mint:test": "node scripts/e2e-mint.js",
+    "seed:wall": "node scripts/seed-wall.js",
+    "export:data": "node scripts/export-data.js"
+  }
+}
