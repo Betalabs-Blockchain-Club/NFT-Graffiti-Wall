@@ -8,7 +8,7 @@ The **only trusted writer**: validates drawings, pins to IPFS, queues + retries 
 - `GET /api/artworks/:jobId/status`, `GET /api/gallery?status=approved&limit&cursor`.
 - `POST /api/admin/*` — Bearer `ADMIN_TOKEN`: approve/hide/reset/mode.
 - `POST /api/votes {artworkId, category, voterKey}`.
-- WS: `/ws/gallery`, `/ws/status/:jobId`.
+- Socket.IO: namespace `/gallery` emits `new` (`GalleryItem`) and `hide` (`{id}`); namespace `/status` accepts `subscribe(jobId)` and emits `job` (`MintJob`).
 - Env: `RPC_URL, CONTRACT_ADDRESS, MINTER_PRIVATE_KEY, PINATA_JWT|KUBO_API, DATABASE_URL, MODERATION_MODE, KILL_SWITCH`.
 
 ## 3. Outputs (to chain/IPFS/DB/frontends)
