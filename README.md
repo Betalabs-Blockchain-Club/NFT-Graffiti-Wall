@@ -326,8 +326,8 @@ Base: `http://localhost:3001`
 | POST | `/api/votes` | Cast vote (rate-limited) |
 | GET | `/api/leaderboard` | Tallies |
 | POST | `/api/admin/reset` | Archive day's data |
-| WS | `/ws/gallery` | New/hidden artwork events |
-| WS | `/ws/status/:jobId` | Mint progress for kiosk |
+| Socket.IO `/gallery` | `new` / `hide` | New/hidden artwork events |
+| Socket.IO `/status` | `subscribe(jobId)` / `job` | Mint progress for kiosk |
 
 Data model:
 

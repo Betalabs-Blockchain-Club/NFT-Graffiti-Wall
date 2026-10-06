@@ -5,7 +5,7 @@ Crowd magnet on TV/projector. Shows approved art grid with NEW animation + optio
 
 ## 2. Inputs
 - `GET /api/gallery?status=approved&limit&cursor` (paginated, poll every 10s as fallback).
-- `WS /ws/gallery` events `{type: 'new'|'hide', artwork: GalleryItem}`.
+- Socket.IO `/gallery` namespace: `new` (`GalleryItem`) and `hide` (`{id}`).
 - Env: `VITE_API_URL, VITE_WS_URL`.
 
 ## 3. Outputs

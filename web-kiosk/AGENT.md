@@ -6,7 +6,7 @@ The visitor-facing mint terminal. Turns 60 seconds of drawing into a QR certific
 ## 2. Inputs
 - Touch/mouse strokes on `<canvas>` (brush, eraser, colour, size, undo/redo, clear, optional 60-s timer).
 - `nickname` (1–32 chars, profanity-filtered via `shared`).
-- Backend: `POST /api/artworks`, `GET /status`, `WS /ws/status/:jobId`.
+- Backend: `POST /api/artworks`, `GET /status`, Socket.IO `/status` namespace (`subscribe(jobId)` / `job`).
 - Env (public only): `VITE_API_URL, VITE_WS_URL, VITE_VERIFY_URL, VITE_EVENT_NAME`.
 
 ## 3. Outputs

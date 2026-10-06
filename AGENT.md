@@ -35,7 +35,7 @@ Coordinate 5 runtime services + shared lib + ops so that the pipeline `DRAW → 
 ## 4. Cross-service interfaces (do not break)
 
 1. **Backend REST** — `POST /api/artworks {imageBase64|multipart, nickname, clientHash}` → `{jobId, status}`. `GET /api/artworks/:id/status`. `GET /api/gallery?status=approved`. See `backend/AGENT.md` + `docs/api.md`.
-2. **WS** — `/ws/gallery {type: new|hide, artwork}` and `/ws/status/:jobId {stage, txHash, tokenId, error}`.
+2. **Socket.IO** — namespace `/gallery` emits `new` (`GalleryItem`) and `hide` (`{id}`); namespace `/status` accepts `subscribe(jobId)` and emits `job` (`MintJob`). Clients may poll REST for status.
 3. **Chain** — `mint(to, nickname, ipfsCID, artworkHash, metadataURI)`, `verify(id, hash)`, `ArtworkMinted` event. See `contracts/AGENT.md`.
 4. **Verify deep-link** — `{VERIFY_BASE}/#/token/{tokenId}`. QR encodes exactly this. All frontends use `shared/src/qr`.
 5. **Shared types** — `Artwork, MintJob, GalleryItem, VerifyResult` in `shared/src/types`. Backend and frontends must use them, not redefine.

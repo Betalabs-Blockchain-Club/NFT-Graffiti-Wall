@@ -24,11 +24,13 @@ export interface MintJob {
 }
 
 export interface GalleryItem {
-  tokenId: number;
+  id: string;
+  tokenId?: number;
   nickname: string;
   imageCID: string;
   imageUrl: string;
   sha256: string;
+  status: "pending" | "minted" | "approved" | "hidden";
   createdAt: string;
 }
 
