@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 export type JobStage = "hashing" | "uploading" | "minting" | "confirmed" | "failed";
 export interface MintJob {
 	jobId: string;
@@ -44,6 +42,12 @@ type QueueOptions = {
 
 class PermanentQueueError extends Error {}
 
+async function sha256(bytes: Uint8Array): Promise<string> {
+	if (!globalThis.crypto?.subtle) throw new Error("WebCrypto is required for queue hashing");
+	const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes as BufferSource);
+	return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export function createMintQueue(options: QueueOptions) {
 	const jobs = new Map<string, MintJob>();
 	const inputs = new Map<string, MintInput>();
@@ -63,7 +67,7 @@ export function createMintQueue(options: QueueOptions) {
 	};
 
 	const process = async (input: MintInput, job: MintJob) => {
-		const bytesHash = createHash("sha256").update(input.pngBytes).digest("hex");
+		const bytesHash = await sha256(input.pngBytes);
 		if (bytesHash !== input.clientHash.replace(/^0x/, "").toLowerCase()) {
 			throw new PermanentQueueError("client hash does not match uploaded bytes");
 		}
