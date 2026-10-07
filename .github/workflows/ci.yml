@@ -23,6 +23,9 @@ jobs:
         run: npx hardhat test
         working-directory: contracts
 
+      - name: Workspace tests
+        run: npm test --workspaces --if-present
+
       - name: Type-check workspaces
         run: |
           for ws in contracts backend shared web-kiosk web-gallery web-verify web-admin; do

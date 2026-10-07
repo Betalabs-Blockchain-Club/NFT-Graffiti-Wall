@@ -5,7 +5,9 @@ services:
       dockerfile: infra/docker/Dockerfile.backend
     ports:
       - "3001:3001"
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       # Override with compose-internal service hostnames; no secrets here.
       RPC_URL: http://hardhat:8545
@@ -29,6 +31,7 @@ services:
     working_dir: /app
     volumes:
       - ./contracts:/app
+      - hardhat-node-modules:/app/node_modules
     # deploy contract after node is ready:
     #   docker compose exec hardhat npx hardhat run scripts/deploy.ts --network localhost
     command: sh -c "npm install && npx hardhat node --hostname 0.0.0.0"
@@ -36,10 +39,10 @@ services:
       - "8545:8545"
     healthcheck:
       # Plain GET returns HTTP 400; send a real JSON-RPC call instead.
-      test: ["CMD-SHELL", "wget -qO- --post-data='{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"id\":1}' --header='Content-Type: application/json' http://localhost:8545"]
+      test: ["CMD-SHELL", "wget -qO- --post-data='{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"id\":1}' --header='Content-Type: application/json' http://127.0.0.1:8545"]
       interval: 10s
       timeout: 5s
-      start_period: 30s
+      start_period: 60s
       retries: 6
 
   kubo:
@@ -51,7 +54,7 @@ services:
     volumes:
       - kubo-data:/data/ipfs
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:5001/api/v0/id"]
+      test: ["CMD-SHELL", "wget -qO- --post-data='' http://localhost:5001/api/v0/id"]
       interval: 15s
       timeout: 5s
       start_period: 20s
@@ -60,3 +63,4 @@ services:
 volumes:
   kubo-data:
   backend-data:
+  hardhat-node-modules:

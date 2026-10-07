@@ -2,6 +2,7 @@
   "name": "nft-graffiti-wall",
   "private": true,
   "version": "0.1.0",
+  "type": "module",
   "description": "Draw -> Hash -> IPFS -> Mint -> Verify -> Live Gallery (TechFest expo)",
   "workspaces": [
     "contracts",
