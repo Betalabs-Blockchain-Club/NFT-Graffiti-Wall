@@ -52,3 +52,114 @@ function metadataJson(metadata: Record<string, unknown>): string {
   }
 }
 
+/** Pin exact received bytes and metadata; all configuration is caller supplied. */
+export function createIpfs({ provider, pinataJwt, kuboApi, fetchImpl = globalThis.fetch }: IpfsOptions) {
+  if (provider !== "pinata" && provider !== "kubo") {
+    throw new IpfsError("Unsupported IPFS provider", false, "invalid-config");
+  }
+  if (typeof fetchImpl !== "function") throw new IpfsError("Fetch implementation is required", false, "invalid-config");
+
+  async function request(target: IpfsProvider, file: Blob, filename: string, json?: string): Promise<string> {
+    let url: string;
+    const headers: Record<string, string> = {};
+    let body: BodyInit;
+    if (target === "pinata") {
+      if (typeof pinataJwt !== "string" || !pinataJwt.trim() || /\s/.test(pinataJwt)) {
+        throw new IpfsError("Pinata credentials are not configured", false, "invalid-config", target);
+      }
+      headers.Authorization = `Bearer ${pinataJwt}`;
+      if (json !== undefined) {
+        url = `${PINATA_API}pinJSONToIPFS`;
+        headers["Content-Type"] = "application/json";
+        body = `{"pinataContent":${json},"pinataOptions":{"cidVersion":1}}`;
+      } else {
+        url = `${PINATA_API}pinFileToIPFS`;
+        const form = new FormData();
+        form.append("file", file, filename);
+        form.append("pinataOptions", JSON.stringify({ cidVersion: 1 }));
+        body = form;
+      }
+    } else {
+      try {
+        const base = new URL(kuboApi ?? "");
+        if (!["http:", "https:"].includes(base.protocol) || base.username || base.password || base.search || base.hash) throw new Error();
+        base.pathname = `${base.pathname.replace(/\/$/, "").replace(/\/api\/v0$/, "")}/api/v0/add`;
+        base.search = new URLSearchParams({ pin: "true", "cid-version": "1", "raw-leaves": "true",
+          "wrap-with-directory": "false", progress: "false" }).toString();
+        url = base.toString();
+      } catch {
+        throw new IpfsError("Kubo API URL is not configured correctly", false, "invalid-config", target);
+      }
+      const form = new FormData();
+      form.append("file", file, filename);
+      body = form;
+    }
+
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        reject(new IpfsError("IPFS request timed out", true, "timeout", target));
+        controller.abort();
+      }, REQUEST_TIMEOUT_MS);
+    });
+    const perform = async () => {
+      const response = await fetchImpl(url, { method: "POST", headers, body, signal: controller.signal, redirect: "error" });
+      if (!response.ok) {
+        void response.body?.cancel().catch(() => {});
+        const retryable = response.status >= 500 || [408, 425, 429].includes(response.status);
+        throw new IpfsError("IPFS provider rejected the request", retryable, "http-error", target, response.status);
+      }
+      try {
+        let cid: unknown;
+        if (target === "pinata") {
+          const payload = await response.json() as { IpfsHash?: unknown } | null;
+          cid = payload?.IpfsHash;
+        } else {
+          const lines = (await response.text()).trim().split(/\r?\n/).filter(Boolean);
+          const records = lines.map((line) => JSON.parse(line) as { Hash?: unknown; Message?: unknown; Error?: unknown });
+          if (records.some((record) => !record || record.Message !== undefined || record.Error !== undefined)) throw new Error();
+          cid = records.at(-1)?.Hash;
+        }
+        if (!validCid(cid)) throw new Error();
+        return cid;
+      } catch {
+        throw new IpfsError("IPFS provider returned an invalid response", true, "invalid-response", target);
+      }
+    };
+    try {
+      return await Promise.race([perform(), timeout]);
+    } catch (error) {
+      if (error instanceof IpfsError) throw error;
+      // Provider bodies and raw network exceptions can contain credentials.
+      throw new IpfsError("IPFS provider is unreachable", true, "network-error", target);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
+  }
+
+  async function pin(file: Blob, filename: string, json?: string): Promise<string> {
+    const failures: IpfsError[] = [];
+    for (const target of [provider, provider === "pinata" ? "kubo" : "pinata"] as const) {
+      try { return await request(target, file, filename, json); }
+      catch (error) { failures.push(error as IpfsError); }
+    }
+    throw new IpfsError("IPFS pinning failed for both providers", failures.some((error) => error.retryable), "all-providers-failed");
+  }
+
+  return {
+    async pinImage(bytes: Uint8Array): Promise<string> {
+      if (!(bytes instanceof Uint8Array) || bytes.byteLength === 0) {
+        throw new IpfsError("Image bytes are required", false, "invalid-image");
+      }
+      // Copy precisely this view once, before any await. Blob snapshots those
+      // bytes for both attempts even if the caller mutates its buffer later.
+      const file = new Blob([new Uint8Array(bytes)], { type: "image/png" });
+      return pin(file, "artwork.png");
+    },
+    async pinMetadata(metadata: Record<string, unknown>): Promise<string> {
+      const json = metadataJson(metadata);
+      return pin(new Blob([json], { type: "application/json" }), "metadata.json", json);
+    }
+  };
+}
