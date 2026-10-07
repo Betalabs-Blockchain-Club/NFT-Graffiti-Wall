@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Hardhat tests
+        run: npx hardhat test
+        working-directory: contracts
+
+      - name: Type-check workspaces
+        run: |
+          for ws in contracts backend shared web-kiosk web-gallery web-verify web-admin; do
+            if [ -f "$ws/tsconfig.json" ]; then
+              echo "Type-checking $ws..."
+              npx tsc --noEmit -p "$ws/tsconfig.json"
+            fi
+          done
