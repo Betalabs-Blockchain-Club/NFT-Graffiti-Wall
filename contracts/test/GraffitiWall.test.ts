@@ -44,4 +44,10 @@ describe("GraffitiWall", () => {
       c.mint(admin.address, "A", CID, "0x0000000000000000000000000000000000000000000000000000000000000000", URI)
     ).to.be.revertedWith("empty hash");
   });
+
+  it("reverts when the nickname exceeds 32 bytes", async () => {
+    const { c, admin } = await deploy();
+    await expect(c.mint(admin.address, "a".repeat(33), CID, HASH, URI))
+      .to.be.revertedWith("nickname too long");
+  });
 });
