@@ -15,3 +15,5 @@ typechain-types/
 # uploads (expo local cache, never commit art)
 backend/uploads/
 backend/data/
+# script exports (generated data, not source)
+exports/
