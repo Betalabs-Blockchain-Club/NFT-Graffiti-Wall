@@ -6,6 +6,7 @@ import { Attract } from "./pages/Attract";
 import { Draw } from "./pages/Draw";
 import { Nickname } from "./pages/Nickname";
 import { Progress } from "./pages/Progress";
+import { Certificate } from "./pages/Certificate";
 import { kioskConfig } from "./lib/config";
 
 const screens = [
@@ -91,7 +92,7 @@ export default function App() {
             <Route path="/draw" element={<Draw />} />
             <Route path="/nickname" element={<Nickname />} />
             <Route path="/progress" element={<Progress />} />
-            <Route path="/certificate" element={<PlaceholderScreen title="Proof complete" description="Your artwork, token ID, transaction, and QR certificate will appear here." />} />
+            <Route path="/certificate" element={<Certificate />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </motion.div>
