@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronLeft, Palette, TimerReset } from "lucide-react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Attract } from "./pages/Attract";
+import { Draw } from "./pages/Draw";
 import { kioskConfig } from "./lib/config";
 
 const screens = [
@@ -85,7 +86,7 @@ export default function App() {
         <motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
           <Routes>
             <Route path="/" element={<Attract onStart={() => navigate("/draw")} />} />
-            <Route path="/draw" element={<PlaceholderScreen title="Draw your tag" description="Your canvas lands here next. Choose a brush, make something unmistakably yours, then continue." next="/nickname" nextLabel="Continue" />} />
+            <Route path="/draw" element={<Draw />} />
             <Route path="/nickname" element={<PlaceholderScreen title="Choose a nickname" description="A short handle is all we need. No real names, no wallet, no friction." next="/progress" nextLabel="Mint my art" />} />
             <Route path="/progress" element={<PlaceholderScreen title="Your mark is moving" description="Hashing, uploading, minting, and confirmation states will appear here." next="/certificate" nextLabel="View certificate" />} />
             <Route path="/certificate" element={<PlaceholderScreen title="Proof complete" description="Your artwork, token ID, transaction, and QR certificate will appear here." />} />

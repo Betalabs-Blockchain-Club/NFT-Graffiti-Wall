@@ -50,6 +50,32 @@ h1 span { display: block; color: #d7ff4f; }
 .stub-panel p { max-width: 500px; color: #bbc5bc; font-size: 1.2rem; line-height: 1.55; }
 .back-button { position: absolute; top: 100px; left: 28px; display: inline-flex; align-items: center; gap: 5px; }
 
+.draw-screen { min-height: 100vh; padding: 122px clamp(20px, 6vw, 96px) 48px; background: radial-gradient(circle at 72% 20%, #263a32, #101313 52%); }
+.draw-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 22px; }
+.draw-heading h1 { margin: 14px 0 0; font-size: clamp(2.8rem, 6vw, 5.8rem); }
+.draw-heading .back-button { position: static; }
+.drawing-tool { width: min(1200px, 100%); margin: 0 auto; }
+.drawing-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px; border: 1px solid #44564d; background: #17201d; }
+.tool-group { display: flex; align-items: center; gap: 8px; }
+.tool-group-right { justify-content: end; }
+.tool-button { display: grid; place-items: center; width: 52px; height: 52px; color: #dfe8df; border: 1px solid #46564e; border-radius: 7px; background: #202a26; }
+.tool-button:hover, .tool-button.is-selected { color: #101313; border-color: #d7ff4f; background: #d7ff4f; }
+.tool-button:disabled { cursor: not-allowed; opacity: .3; }
+.color-picker { display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid #46564e; border-radius: 7px; background: #202a26; }
+.color-picker input { width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; overflow: hidden; }
+.size-control { display: flex; align-items: center; gap: 10px; color: #aeb9af; font: 12px "DM Mono", monospace; }
+.size-control input { width: min(180px, 18vw); accent-color: #d7ff4f; }
+.canvas-frame { position: relative; margin-top: 16px; overflow: hidden; border: 1px solid #596b60; background-color: #f7f4eb; background-image: radial-gradient(#d8d5ca 1px, transparent 1px); background-size: 18px 18px; box-shadow: 12px 12px 0 #d7ff4f; }
+.canvas-frame canvas { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 760; touch-action: none; cursor: crosshair; }
+.canvas-hint { position: absolute; right: 18px; bottom: 14px; color: #6e756d; font: 12px "DM Mono", monospace; pointer-events: none; }
+.drawing-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; }
+.timer-badge { display: inline-flex; align-items: center; gap: 9px; padding: 10px 14px; color: #d7ff4f; border: 1px solid #53654d; border-radius: 7px; background: #17201d; font: 16px "DM Mono", monospace; }
+.timer-badge.is-warning { color: #ef7c52; border-color: #ef7c52; }
+.timer-icon { width: 14px; height: 14px; border: 2px solid currentColor; border-radius: 50%; }
+.exact-bytes-note { color: #849087; font: 12px "DM Mono", monospace; }
+.continue-drawing { display: flex; margin: 28px auto 0; }
+.drawing-error { width: fit-content; margin: 18px auto 0; color: #ffad95; font: 13px "DM Mono", monospace; }
+
 @media (max-width: 760px) {
   .flow-header { padding: 16px; grid-template-columns: 48px 1fr 68px; gap: 8px; }
   .brand-mark { width: 42px; height: 42px; }
@@ -60,4 +86,12 @@ h1 span { display: block; color: #d7ff4f; }
   h1 { font-size: clamp(3.8rem, 18vw, 6rem); }
   .attract-art { width: 72%; margin: 58px auto 0; box-shadow: 10px 10px 0 #d7ff4f; }
   .attract-meta { gap: 12px; }
+  .draw-screen { padding: 98px 16px 32px; }
+  .draw-heading { align-items: start; flex-direction: column; }
+  .draw-heading .back-button { align-self: start; }
+  .drawing-toolbar { flex-wrap: wrap; }
+  .size-control { order: 3; width: 100%; justify-content: center; }
+  .size-control input { width: min(240px, 55vw); }
+  .canvas-hint { font-size: 10px; }
+  .drawing-footer { align-items: start; flex-direction: column; gap: 12px; }
 }
