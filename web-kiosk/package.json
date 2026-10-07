@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@graffiti/shared": "^0.1.0",
     "framer-motion": "^11.18.2",
     "qrcode.react": "^4.2.0",
     "react": "^18.3.0",
