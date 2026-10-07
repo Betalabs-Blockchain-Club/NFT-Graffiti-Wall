@@ -47,8 +47,8 @@ export function useGallerySocket(): UseGallerySocketResult {
       setHasLeaderboard(true);
       const voteMap: Record<string, number> = {};
       for (const entry of data as LeaderboardEntry[]) {
-        if (entry.id) {
-          voteMap[entry.id] = entry.votes ?? 0;
+        if (entry.artworkId) {
+          voteMap[entry.artworkId] = entry.votes ?? 0;
         }
       }
       return voteMap;
@@ -68,8 +68,9 @@ export function useGallerySocket(): UseGallerySocketResult {
         fetchLeaderboard(),
       ]);
 
-      if (galleryRes && Array.isArray(galleryRes)) {
-        const approvedItems: GalleryItem[] = galleryRes.filter(
+      const galleryItems = Array.isArray(galleryRes) ? galleryRes : galleryRes?.items;
+      if (Array.isArray(galleryItems)) {
+        const approvedItems: GalleryItem[] = galleryItems.filter(
           (item: GalleryItem) =>
             item &&
             item.id &&

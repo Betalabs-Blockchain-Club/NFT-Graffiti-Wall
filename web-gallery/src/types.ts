@@ -13,7 +13,7 @@ export interface GalleryItem {
 }
 
 export interface LeaderboardEntry {
-  id: string;
+  artworkId: string;
   tokenId?: number;
   nickname?: string;
   votes: number;
