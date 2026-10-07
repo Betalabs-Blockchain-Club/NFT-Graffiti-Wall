@@ -31,4 +31,29 @@ describe("canvas PNG helpers", () => {
       code: "TOO_LARGE"
     } satisfies Partial<CanvasExportError>);
   });
+
+  it("rejects when toBlob produces null blob", async () => {
+    const canvas = {
+      toBlob(callback: (blob: Blob | null) => void) {
+        callback(null);
+      }
+    };
+
+    await expect(exportPNG(canvas)).rejects.toMatchObject({
+      name: "CanvasExportError",
+      code: "EMPTY_BLOB"
+    } satisfies Partial<CanvasExportError>);
+  });
+
+  it("accepts PNG that exactly matches maxBytes", async () => {
+    const png = new Blob([new Uint8Array(10)], { type: "image/png" });
+    const canvas = {
+      toBlob(callback: (blob: Blob | null) => void) {
+        callback(png);
+      }
+    };
+
+    const exported = await exportPNG(canvas, { maxBytes: 10 });
+    expect(exported.size).toBe(10);
+  });
 });
