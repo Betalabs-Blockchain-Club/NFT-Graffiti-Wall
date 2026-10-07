@@ -5,7 +5,7 @@ import type { MintJob } from "@graffiti/shared/types";
 import type { ArtworkExport } from "../components/DrawingCanvas/DrawingCanvas";
 import { kioskConfig } from "../lib/config";
 
-type MintJobState = {
+export type MintJobState = {
   jobId?: string;
   stage?: MintJob["stage"];
   retry: number;
