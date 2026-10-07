@@ -433,3 +433,62 @@ if (import.meta.vitest) {
     });
   });
 }
+
+/*
+Integration / standalone verification (Member 4 wires this in W1)
+
+Pass all options into createIpfs. No environment variables are read here.
+Pinata uses its official file/JSON endpoints; Kubo uses POST /api/v0/add with
+pin=true and wrap-with-directory=false. gatewayUrl is caller configuration for
+subsequent reads; it is never a pinning destination and never receives the JWT.
+Each operation tries the selected provider once, then the other provider once.
+Each request has a 30-second deadline, including body reads. Retrying the whole
+operation belongs to the queue. IpfsError.retryable is true if either failed
+provider could recover (network/timeout/5xx/408/425/429/invalid response); missing
+configuration and permanent 4xx failures are non-retryable. Errors omit raw
+provider bodies, network messages, URLs, and credentials.
+
+Image validation and hashing are upstream responsibilities. pinImage snapshots
+only the supplied Uint8Array view and never re-encodes it. pinMetadata snapshots
+its JSON once, requires ipfs:// image plus Creator/SHA-256/Event attributes, and
+preserves metadata values across fallback. Provider import settings can produce
+different CIDs for the same file; verify the retrieved image bytes against SHA-256.
+
+Unit tests are in-source to preserve single-file ownership. From backend/ with
+its existing Vitest dependency installed, enable in-source discovery temporarily:
+
+printf '%s\n' 'export default { test: { includeSource: ["src/services/ipfs.ts"] } };' > /tmp/graffiti-ipfs.vitest.mjs
+npm test -- src/services/ipfs.ts --config /tmp/graffiti-ipfs.vitest.mjs
+
+Optional live smoke, from backend/: supply ./artwork.png and redirect a PRIVATE
+JSON configuration file to stdin. Its fields match IpfsOptions. Use a real Pinata
+JWT or a running local Kubo daemon; keep the private file outside the repository.
+This caller-side example reads configuration; the IPFS module itself does not.
+
+node --import tsx --input-type=module -e '
+  import { readFileSync } from "node:fs";
+  import { createHash } from "node:crypto";
+  import { createIpfs } from "./src/services/ipfs.ts";
+  const config = JSON.parse(readFileSync(0, "utf8"));
+  const bytes = readFileSync("./artwork.png");
+  const ipfs = createIpfs(config);
+  const imageCID = await ipfs.pinImage(bytes);
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  const metadataCID = await ipfs.pinMetadata({
+    name: "IPFS smoke", description: "Exact-byte upload check", image: `ipfs://${imageCID}`,
+    attributes: [
+      { trait_type: "Creator", value: "Smoke" },
+      { trait_type: "SHA-256", value: sha256 },
+      { trait_type: "Event", value: "Local test" }
+    ]
+  });
+  console.log({ imageCID, metadataCID, sha256 });
+' < /private/path/ipfs-config.json
+
+No live credentials are needed for unit tests. WORKSPLIT.md was absent from this
+checkout. PR body: Closes #<issue-number> (the issue number was not supplied).
+Protocol references:
+https://docs.pinata.cloud/api-reference/endpoint/ipfs/pin-file-to-ipfs
+https://docs.pinata.cloud/api-reference/endpoint/ipfs/pin-json-to-ipfs
+https://docs.ipfs.tech/reference/kubo/rpc/#api-v0-add
+*/
