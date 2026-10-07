@@ -16,6 +16,8 @@ const MintJobSchema = z.object({
   tokenId: z.number().optional(),
   txHash: z.string().optional(),
   imageCID: z.string().optional(),
+  metadataCID: z.string().optional(),
+  retry: z.number().optional(),
   error: z.string().optional()
 });
 

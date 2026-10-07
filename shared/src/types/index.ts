@@ -20,6 +20,8 @@ export interface MintJob {
   tokenId?: number;
   txHash?: string;
   imageCID?: string;
+  metadataCID?: string;
+  retry?: number;
   error?: string;
 }
 
