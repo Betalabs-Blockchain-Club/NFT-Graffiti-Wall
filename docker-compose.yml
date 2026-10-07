@@ -35,7 +35,8 @@ services:
     ports:
       - "8545:8545"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8545"]
+      # Plain GET returns HTTP 400; send a real JSON-RPC call instead.
+      test: ["CMD-SHELL", "wget -qO- --post-data='{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"id\":1}' --header='Content-Type: application/json' http://localhost:8545"]
       interval: 10s
       timeout: 5s
       start_period: 30s
