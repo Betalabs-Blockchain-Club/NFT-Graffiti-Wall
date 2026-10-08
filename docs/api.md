@@ -35,9 +35,11 @@ JSON body: `{ "artworkId": string, "category": string, "voterKey": string }`. A 
 ## Admin (Bearer `ADMIN_TOKEN`)
 
 - `POST /api/admin/artworks/:jobId/mint` → `{ item: GalleryItem, job: MintJob }`; submits a prepared artwork to the chain, marks it `approved` after receipt, and emits gallery `new`.
+- `GET /api/admin/artworks/:jobId/certificate` → `{ txHash, mintedAt }`; returns certificate transaction data and mint time for a minted artwork.
 - `POST /api/admin/artworks/:jobId/retry-ipfs` → `{ job: MintJob }`; retries failed IPFS preparation while the backend still has the uploaded bytes.
 - `POST /api/admin/artworks/:jobId/restore` → `{ item: GalleryItem }`; republishes an already minted hidden artwork.
 - `POST /api/admin/artworks/:jobId/hide` → `{ item: GalleryItem }`; changes it to `hidden` and emits gallery `hide` (`{ id }`).
+- `POST /api/admin/artworks/:jobId/archive` → `{ ok, archiveId, artworkCount, voteCount }`; archives an approved item so it no longer appears in the public gallery or active admin queue, and emits gallery `hide` (`{ id }`).
 - `PUT /api/admin/config` → current config. JSON may include `KILL_SWITCH` (boolean) and/or `IPFS_PROVIDER` (`pinata | kubo`). Legacy `MODERATION_MODE` values remain accepted for existing deployments but no longer change the mint flow.
 - `POST /api/admin/reset` with `{ "confirm": "ARCHIVE YYYY-MM-DD" }` for **today's UTC date** → `{ ok, archiveId, artworkCount, voteCount }`. The route archives all current artwork and votes; wrong confirmation is rejected.
 - `POST /api/admin/clear-gallery` with `{ "confirm": "CLEAR GALLERY" }` → archives approved gallery artwork and its votes, then emits gallery `hide` events.

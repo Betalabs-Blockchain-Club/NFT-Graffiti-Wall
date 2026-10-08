@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS artworks (
   sha256 TEXT NOT NULL,           -- hex, no 0x
   tx_hash TEXT,
   block_number INTEGER,
+  minted_at TEXT,
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending','minted','approved','hidden','failed')),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),

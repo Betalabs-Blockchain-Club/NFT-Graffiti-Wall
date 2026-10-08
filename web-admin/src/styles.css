@@ -98,6 +98,27 @@ h1, h2 { font-family: "Space Grotesk", sans-serif; letter-spacing: -.035em; }
 .indicator-unknown, .indicator-neutral { background: #e2b75b; }
 .health-updated { margin: 10px 0 0; color: #81889a; font-size: .76rem; }
 .balance-alert { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 13px 15px; border: 1px solid #a94449; border-radius: 11px; color: #ffd3d1; background: #46272d; }
+.card-art-open { position: absolute; inset: 0; display: grid; place-items: center; width: 100%; padding: 0; overflow: hidden; border: 0; background: transparent; }
+.card-art-open img { pointer-events: none; }
+.certificate-modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow: auto; padding: 28px; background: #090b12d9; }
+.certificate-modal { position: relative; width: min(1080px, 100%); margin: auto; }
+.certificate-modal-close { position: absolute; top: -17px; right: -17px; z-index: 1; width: 42px; height: 42px; border: 1px solid #65766b; border-radius: 50%; color: #101313; background: #f4f1e8; font-size: 1.8rem; line-height: 1; }
+.admin-certificate-card { display: grid; grid-template-columns: minmax(180px, 330px) minmax(0, 1fr) 190px; align-items: center; gap: 36px; padding: 38px; border: 1px solid #65766b; border-radius: 12px; color: #101313; background: #f4f1e8; box-shadow: 14px 14px 0 #a2ef72; }
+.admin-certificate-artwork { aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; border: 1px solid #c5c5b9; background: #fff; }
+.admin-certificate-artwork img { display: block; width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.admin-certificate-artwork span { padding: 12px; color: #747a70; text-align: center; }
+.admin-certificate-kicker { color: #4f6355; font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; }
+.admin-certificate-content h2 { margin: 16px 0 8px; color: #101313; font: 700 clamp(2rem, 5vw, 4rem) "Space Grotesk", sans-serif; line-height: .95; overflow-wrap: anywhere; }
+.admin-certificate-token { color: #e25f3f; font: 600 18px ui-monospace, monospace; }
+.admin-certificate-date { margin: 8px 0; color: #5d6860; font-size: .8rem; }
+.admin-certificate-rule { height: 1px; margin: 20px 0; background: #c8c9bd; }
+.admin-certificate-data { display: grid; gap: 12px; margin: 0; color: #59645c; font: .68rem ui-monospace, monospace; }
+.admin-certificate-data div { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px; }
+.admin-certificate-data dt { color: #849087; text-transform: uppercase; }
+.admin-certificate-data dd { overflow: hidden; margin: 0; color: #101313; text-overflow: ellipsis; white-space: nowrap; }
+.admin-certificate-qr { display: grid; justify-items: center; gap: 10px; color: #435249; font-size: .68rem; font-weight: 700; text-align: center; text-transform: uppercase; }
+.admin-certificate-qr-error { color: #9e3c3c; }
+@media (max-width: 760px) { .certificate-modal-backdrop { padding: 20px; } .admin-certificate-card { grid-template-columns: 1fr; gap: 22px; padding: 22px; } .admin-certificate-artwork { width: min(72vw, 360px); margin: 0 auto; } .admin-certificate-qr { justify-items: start; } .certificate-modal-close { top: -12px; right: -12px; } }
 .balance-alert p { margin: 3px 0 0; color: #e9a6a4; font-size: .79rem; }
 .balance-alert b { margin-left: auto; color: #fff0ef; font-family: ui-monospace, monospace; }
 .alert-symbol { width: 25px; height: 25px; display: grid; place-items: center; border-radius: 50%; color: #391a1d; background: #ff8985; font-weight: 900; }

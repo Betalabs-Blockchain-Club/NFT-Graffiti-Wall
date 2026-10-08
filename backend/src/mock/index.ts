@@ -186,6 +186,14 @@ export function createMockApi(options: MockApiOptions = {}) {
     return artwork ? res.json(artwork.job) : undefined;
   });
 
+  router.get("/api/admin/artworks/:id/certificate", (req, res) => {
+    if (!requireAdmin(req, res)) return undefined;
+    const artwork = findArtwork(req.params.id, res);
+    if (!artwork) return undefined;
+    if (artwork.item.tokenId == null) return jsonError(res, 404, "not-found", "Minted artwork certificate data not found");
+    return res.json({ txHash: artwork.job.txHash ?? `0x${artwork.item.sha256}`, mintedAt: artwork.item.createdAt });
+  });
+
   router.get("/api/gallery", (req, res) => {
     const status = String(req.query.status ?? "approved") as GalleryStatus;
     if (!["pending", "minted", "approved", "hidden"].includes(status)) {
@@ -230,6 +238,16 @@ export function createMockApi(options: MockApiOptions = {}) {
     artwork.item.status = "hidden";
     emitGallery("hide", { id: artwork.item.id });
     return res.json({ item: { ...artwork.item } });
+  });
+
+  router.post("/api/admin/artworks/:id/archive", (req, res) => {
+    if (!requireAdmin(req, res)) return undefined;
+    const artwork = findArtwork(req.params.id, res);
+    if (!artwork) return undefined;
+    if (artwork.status !== "approved") return jsonError(res, 409, "not-ready", "Only published artwork can be removed from the gallery");
+    artworks.delete(req.params.id);
+    emitGallery("hide", { id: req.params.id });
+    return res.json({ ok: true, archiveId: `mock-archive-${Date.now()}`, artworkCount: 1, voteCount: 0 });
   });
 
   router.put("/api/admin/config", (req, res) => {

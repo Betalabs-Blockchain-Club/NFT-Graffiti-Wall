@@ -35,6 +35,11 @@ export function createAdminRouter({ storage, queue, adminToken, hooks }: AdminOp
     await hooks.onApproved(item);
     res.json({ item, job });
   }));
+  router.get("/api/admin/artworks/:jobId/certificate", route((req, res) => {
+    const artwork = storage.getById(req.params.jobId);
+    if (!artwork || artwork.tokenId == null) throw new StorageError("not-found", "Minted artwork certificate data not found", 404);
+    res.json(storage.getCertificateDetails(req.params.jobId));
+  }));
   router.post("/api/admin/artworks/:jobId/retry-ipfs", route(async (req, res) => {
     const existing = storage.getById(req.params.jobId);
     if (!existing) throw new StorageError("not-found", "Artwork not found", 404);
@@ -46,6 +51,11 @@ export function createAdminRouter({ storage, queue, adminToken, hooks }: AdminOp
     const artwork = storage.setStatus(req.params.jobId, "hidden");
     await hooks.onHidden(artwork.id);
     res.json({ item: toGalleryItem(artwork) });
+  }));
+  router.post("/api/admin/artworks/:jobId/archive", route(async (req, res) => {
+    const archive = storage.archiveArtwork(req.params.jobId);
+    await hooks.onHidden(archive.id);
+    res.json({ ok: true, archiveId: archive.archiveId, artworkCount: archive.artworkCount, voteCount: archive.voteCount });
   }));
   router.post("/api/admin/artworks/:jobId/restore", route(async (req, res) => {
     const artwork = storage.getById(req.params.jobId);

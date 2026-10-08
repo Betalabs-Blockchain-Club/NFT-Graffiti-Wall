@@ -27,6 +27,9 @@ export function createStorage(dbPathOrDb: string | Database.Database) {
   if (!columns.some((column) => column.name === "idempotency_key")) {
     db.exec("ALTER TABLE artworks ADD COLUMN idempotency_key TEXT");
   }
+  if (!columns.some((column) => column.name === "minted_at")) {
+    db.exec("ALTER TABLE artworks ADD COLUMN minted_at TEXT");
+  }
   db.exec("CREATE INDEX IF NOT EXISTS artworks_gallery ON artworks(status, archived_at, created_at DESC, id DESC)");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS artworks_idempotency_key ON artworks(idempotency_key) WHERE idempotency_key IS NOT NULL");
   db.exec("CREATE INDEX IF NOT EXISTS votes_artwork ON votes(artwork_id)");
@@ -105,10 +108,15 @@ export function createStorage(dbPathOrDb: string | Database.Database) {
         throw new StorageError("invalid-input", "Invalid mint receipt numbers");
       }
       requiredString(input.txHash, "txHash"); requiredString(input.imageCID, "imageCID"); requiredString(input.metadataCID, "metadataCID");
-      db.prepare(`UPDATE artworks SET token_id=?,tx_hash=?,block_number=?,image_cid=?,metadata_cid=?,
+      db.prepare(`UPDATE artworks SET token_id=?,tx_hash=?,block_number=?,image_cid=?,metadata_cid=?,minted_at=?,
         status=CASE WHEN status IN ('approved','hidden') THEN status ELSE 'minted' END
-        WHERE id=? AND archived_at IS NULL`).run(input.tokenId, input.txHash, input.blockNumber, input.imageCID, input.metadataCID, input.id);
+        WHERE id=? AND archived_at IS NULL`).run(input.tokenId, input.txHash, input.blockNumber, input.imageCID, input.metadataCID, new Date().toISOString(), input.id);
       return mustExist(input.id);
+    },
+    getCertificateDetails(id: string) {
+      const row = db.prepare("SELECT tx_hash,minted_at FROM artworks WHERE id=? AND archived_at IS NULL").get(id) as { tx_hash: string | null; minted_at: string | null } | undefined;
+      if (!row?.tx_hash) throw new StorageError("not-found", "Minted artwork certificate data not found", 404);
+      return { txHash: row.tx_hash, mintedAt: row.minted_at ?? "" };
     },
     setStatus(id: string, status: ArtworkStatus): Artwork {
       if (![...GALLERY_STATUSES, "failed"].includes(status)) throw new StorageError("invalid-input", "Invalid artwork status");
@@ -184,6 +192,18 @@ export function createStorage(dbPathOrDb: string | Database.Database) {
             .run(createdAt, status, ...excludedIds);
         }
         return { archiveId, artworkCount: ids.length, voteCount, ids };
+      })();
+    },
+    archiveArtwork(id: string) {
+      return db.transaction(() => {
+        const artwork = mustExist(id);
+        if (artwork.status !== "approved") throw new StorageError("not-ready", "Only published artwork can be removed from the gallery", 409);
+        const voteCount = (db.prepare("SELECT COUNT(*) AS count FROM votes WHERE artwork_id=?").get(id) as { count: number }).count;
+        const archiveId = randomUUID();
+        const createdAt = new Date().toISOString();
+        db.prepare("INSERT INTO archive_batches(id,created_at,artwork_count,vote_count) VALUES (?,?,1,?)").run(archiveId, createdAt, voteCount);
+        db.prepare("UPDATE artworks SET archived_at=? WHERE id=? AND archived_at IS NULL").run(createdAt, id);
+        return { archiveId, artworkCount: 1, voteCount, id };
       })();
     },
     archiveAll: db.transaction(() => {

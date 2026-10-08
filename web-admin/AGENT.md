@@ -13,12 +13,12 @@ Staff-only control room: mint prepared art to publish it, review and selectively
 - Ops signals: queue depth, failed jobs (retry button), balance warning, network mode indicator.
 
 ## 4. Functions / Responsibilities
-1. `pages/Queue.tsx` — pending grid with Mint NFT/Hide and IPFS retry actions, plus minted and hidden items.
-2. `pages/Gallery.tsx` — published gallery with an individual Remove from gallery action (hidden items remain restorable from Queue → Hidden).
+1. `pages/Queue.tsx` — pending grid with Mint NFT/Hide and IPFS retry actions, plus minted and hidden items; selecting a minted NFT opens its certificate and public verification QR.
+2. `pages/Gallery.tsx` — published gallery with an individual permanent archive action (archived items no longer appear in the gallery or admin queue).
 3. `pages/Dashboard.tsx` — live health, runtime controls, typed archive reset.
 4. `components/NetworkSwitch.tsx` — `pinata|kubo` provider and minting kill switch (via backend config).
 5. `components/QueueHealth.tsx` — chain/IPFS status, queue depth, and POL wallet balance; red alert below `0.01 POL`.
-6. Auth: store `ADMIN_TOKEN` in memory (not localStorage on shared laptop), auto-lock after 5 min.
+6. Auth: store `ADMIN_TOKEN` in tab-scoped session storage so reloads preserve the session; only the explicit Lock session action or closing the tab clears it.
 7. Reset flow requires the exact current UTC confirmation phrase.
 
 ## 5. Interfaces

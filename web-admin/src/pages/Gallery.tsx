@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { AdminHeader, type AdminPage } from "../components/AdminHeader";
-import { ApiError, hideArtwork, listQueue } from "../lib/api";
+import { ApiError, archiveArtwork, listQueue } from "../lib/api";
 import { ArtworkPreview } from "../components/ArtworkPreview";
 import type { GalleryItem } from "../types";
 
@@ -32,14 +32,14 @@ export function Gallery({ token, onLock, onUnauthorized, onNavigate }: GalleryPr
   useEffect(() => { void refresh(); }, [refresh]);
 
   async function remove(item: GalleryItem) {
-    if (!window.confirm(`Remove “${item.nickname}” from the public gallery? You can restore it later from Queue → Hidden.`)) return;
+    if (!window.confirm(`Permanently remove “${item.nickname}” from the available gallery and admin queue? This cannot be restored from the admin.`)) return;
     setBusyId(item.id);
     setError("");
     setNotice("");
     try {
-      await hideArtwork(item.id, token);
+      await archiveArtwork(item.id, token);
       setItems((current) => current.filter((entry) => entry.id !== item.id));
-      setNotice(`“${item.nickname}” was removed from the public gallery. It remains available in Queue → Hidden.`);
+      setNotice(`“${item.nickname}” was permanently removed from the available gallery and queue.`);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "Could not remove artwork from the gallery.";
       if (cause instanceof ApiError && cause.status === 401) onUnauthorized(message);
@@ -51,7 +51,7 @@ export function Gallery({ token, onLock, onUnauthorized, onNavigate }: GalleryPr
     <main className="admin-shell">
       <AdminHeader page="gallery" onNavigate={onNavigate} onLock={onLock} />
       <section className="queue-heading" id="top">
-        <div><p className="eyebrow">PUBLIC WALL</p><h1>Gallery</h1><p className="muted">Review published artwork and remove individual items from the public wall.</p></div>
+        <div><p className="eyebrow">PUBLIC WALL</p><h1>Gallery</h1><p className="muted">Review published artwork and permanently remove individual items from the available gallery and queue.</p></div>
         <button className="button button-outline" onClick={() => void refresh()} disabled={loading}>↻ <span>Refresh</span></button>
       </section>
       {notice && <p className="notice notice-success" role="status">✓ {notice}</p>}
@@ -68,11 +68,11 @@ export function Gallery({ token, onLock, onUnauthorized, onNavigate }: GalleryPr
                 <div className="creator-row"><span className="nickname">{item.nickname}</span>{item.tokenId != null && <span className="token-id">#{item.tokenId}</span>}</div>
                 <p className="art-meta">Published {formatDate(item.createdAt)}</p>
                 <p className="art-cid" title={item.imageCID}>CID · {item.imageCID}</p>
-                <div className="card-actions"><button className="button button-danger" onClick={() => void remove(item)} disabled={Boolean(busyId)}>{busyId === item.id ? "Removing…" : "Remove from gallery"}</button></div>
+                <div className="card-actions"><button className="button button-danger" onClick={() => void remove(item)} disabled={Boolean(busyId)}>{busyId === item.id ? "Removing…" : "Permanently remove"}</button></div>
               </div>
             </article>)}
           </section>}
-      <footer className="queue-footer">Removed artwork is hidden from the public wall and can be restored from Queue → Hidden.</footer>
+      <footer className="queue-footer">Permanently removed artwork is archived and no longer appears in the public gallery or admin queue.</footer>
     </main>
   );
 }

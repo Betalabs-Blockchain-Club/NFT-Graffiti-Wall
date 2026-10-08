@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { ApiError, clearMintRequests, getArtworkJob, hideArtwork, listQueue, mintArtwork, retryArtworkIpfs, restoreArtwork, type AdminJob } from "../lib/api";
 import { AdminHeader, type AdminPage } from "../components/AdminHeader";
 import { ArtworkPreview } from "../components/ArtworkPreview";
+import { ArtworkCertificate } from "../components/ArtworkCertificate";
 import type { GalleryItem, QueueStatus } from "../types";
 
 const tabs: Array<{ id: QueueStatus; label: string }> = [
@@ -27,6 +28,7 @@ export function Queue({ token, onLock, onUnauthorized, onNavigate }: QueueProps)
   const [busyId, setBusyId] = useState("");
   const [clearingRequests, setClearingRequests] = useState(false);
   const [jobs, setJobs] = useState<Record<string, AdminJob>>({});
+  const [certificateItem, setCertificateItem] = useState<GalleryItem | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -133,7 +135,9 @@ export function Queue({ token, onLock, onUnauthorized, onNavigate }: QueueProps)
           : <section className="art-grid" aria-label={`${status} artwork`}>
             {items.map((item) => <article className="art-card" key={item.id}>
               <div className="art-preview">
-                <ArtworkPreview item={item} />
+                {item.tokenId != null
+                  ? <button className="card-art-open" type="button" onClick={() => setCertificateItem(item)} aria-label={`View certificate for ${item.nickname}`}><ArtworkPreview item={item} /></button>
+                  : <ArtworkPreview item={item} />}
                 <span className={`status-pill status-${item.status}`}>{item.status}</span>
               </div>
               <div className="art-details">
@@ -157,6 +161,7 @@ export function Queue({ token, onLock, onUnauthorized, onNavigate }: QueueProps)
             </article>)}
           </section>}
       <footer className="queue-footer">Minting is recorded on chain; successful NFTs publish to the wall automatically.</footer>
+      {certificateItem && <ArtworkCertificate item={certificateItem} token={token} onClose={() => setCertificateItem(null)} onUnauthorized={onUnauthorized} />}
     </main>
   );
 }

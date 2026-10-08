@@ -32,6 +32,11 @@ export interface AdminJob {
   tokenId?: number;
 }
 
+export interface CertificateDetails {
+  txHash: string;
+  mintedAt: string;
+}
+
 async function request<T>(path: string, token: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${apiBase}${path}`, {
     ...init,
@@ -113,6 +118,10 @@ export async function hideArtwork(id: string, token: string): Promise<GalleryIte
   return result.item;
 }
 
+export function archiveArtwork(id: string, token: string): Promise<ClearQueueResult> {
+  return request<ClearQueueResult>(`/api/admin/artworks/${encodeURIComponent(id)}/archive`, token, { method: "POST" });
+}
+
 export async function restoreArtwork(id: string, token: string): Promise<GalleryItem> {
   const result = await request<{ item?: GalleryItem }>(`/api/admin/artworks/${encodeURIComponent(id)}/restore`, token, { method: "POST" });
   if (!result.item) throw new ApiError("The server did not return the restored artwork.", 502);
@@ -125,6 +134,10 @@ export function retryArtworkIpfs(id: string, token: string): Promise<{ job: Admi
 
 export function getArtworkJob(id: string, token: string): Promise<AdminJob> {
   return request<AdminJob>(`/api/artworks/${encodeURIComponent(id)}/status`, token);
+}
+
+export function getCertificateDetails(id: string, token: string): Promise<CertificateDetails> {
+  return request<CertificateDetails>(`/api/admin/artworks/${encodeURIComponent(id)}/certificate`, token);
 }
 
 function ipfsGatewayUrl(cid: string, gateway: string): string {

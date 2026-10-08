@@ -82,6 +82,14 @@ const server = createServer(async (req, res) => {
     return sendJson(res, 200, { jobId: item.id, stage: item.status === "pending" ? "ready" : item.status === "approved" ? "confirmed" : "failed", imageCID: item.imageCID, metadataCID: `meta-${item.imageCID}`, tokenId: item.tokenId });
   }
 
+  const certificateMatch = url.pathname.match(/^\/api\/admin\/artworks\/([^/]+)\/certificate$/);
+  if (req.method === "GET" && certificateMatch) {
+    if (!authorized(req)) return unauthorized(res);
+    const item = records.get(decodeURIComponent(certificateMatch[1]));
+    if (!item || item.tokenId == null) return sendJson(res, 404, { code: "not-found", message: "Minted artwork certificate data not found." });
+    return sendJson(res, 200, { txHash: `0x${item.sha256}`, mintedAt: item.createdAt });
+  }
+
   if (req.method === "PUT" && url.pathname === "/api/admin/config") {
     if (!authorized(req)) return unauthorized(res);
     let body;
@@ -116,11 +124,16 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "POST" && url.pathname.startsWith("/api/admin/artworks/")) {
     if (!authorized(req)) return unauthorized(res);
-    const match = url.pathname.match(/^\/api\/admin\/artworks\/([^/]+)\/(mint|hide|restore|retry-ipfs)$/);
+    const match = url.pathname.match(/^\/api\/admin\/artworks\/([^/]+)\/(mint|hide|restore|retry-ipfs|archive)$/);
     if (!match) return sendJson(res, 404, { code: "not-found", message: "Moderation route not found." });
     const id = decodeURIComponent(match[1]);
     const item = records.get(id);
     if (!item) return sendJson(res, 404, { code: "not-found", message: "Artwork not found." });
+    if (match[2] === "archive") {
+      if (item.status !== "approved") return sendJson(res, 409, { code: "not-ready", message: "Only published artwork can be removed from the gallery." });
+      records.delete(id);
+      return sendJson(res, 200, { ok: true, archiveId: `mock-archive-${Date.now()}`, artworkCount: 1, voteCount: 0 });
+    }
     if (match[2] === "retry-ipfs") return sendJson(res, 200, { job: { jobId: id, stage: "ready", imageCID: item.imageCID, metadataCID: `meta-${item.imageCID}` } });
     if (match[2] === "mint") {
       item.status = "approved";

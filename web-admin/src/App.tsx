@@ -1,39 +1,26 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Queue } from "./pages/Queue";
 import { Dashboard } from "./pages/Dashboard";
 import { Gallery } from "./pages/Gallery";
 import type { AdminPage } from "./components/AdminHeader";
 
-const IDLE_LIMIT_MS = 5 * 60 * 1000;
-
 export default function App() {
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(() => {
+    try { return window.sessionStorage.getItem("admin-token") ?? ""; }
+    catch { return ""; }
+  });
   const [authMessage, setAuthMessage] = useState("");
   const [draft, setDraft] = useState("");
   const [page, setPage] = useState<AdminPage>("queue");
 
   const lock = useCallback((message = "") => {
+    try { window.sessionStorage.removeItem("admin-token"); } catch { /* Storage may be unavailable. */ }
     setToken("");
     setDraft("");
     setAuthMessage(message);
   }, []);
 
   const rejectToken = useCallback((message: string) => lock(`${message} Enter the current admin token to continue.`), [lock]);
-
-  useEffect(() => {
-    if (!token) return;
-    let timeout = window.setTimeout(() => lock("Session locked after five minutes of inactivity."), IDLE_LIMIT_MS);
-    const resetIdleTimer = () => {
-      window.clearTimeout(timeout);
-      timeout = window.setTimeout(() => lock("Session locked after five minutes of inactivity."), IDLE_LIMIT_MS);
-    };
-    const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "touchstart", "wheel"];
-    for (const event of events) window.addEventListener(event, resetIdleTimer, { passive: true });
-    return () => {
-      window.clearTimeout(timeout);
-      for (const event of events) window.removeEventListener(event, resetIdleTimer);
-    };
-  }, [token, lock]);
 
   if (token) {
     const lockSession = () => { lock(); setPage("queue"); };
@@ -50,12 +37,12 @@ export default function App() {
         <h1>Moderation desk</h1>
         <p className="muted">Enter the admin bearer token to review the wall queue.</p>
         {authMessage && <p className="notice notice-error" role="alert">{authMessage}</p>}
-        <form onSubmit={(event) => { event.preventDefault(); if (draft.trim()) { setAuthMessage(""); setToken(draft.trim()); } }}>
+        <form onSubmit={(event) => { event.preventDefault(); if (draft.trim()) { const value = draft.trim(); try { window.sessionStorage.setItem("admin-token", value); } catch { /* Keep the active session in memory if storage is unavailable. */ } setAuthMessage(""); setToken(value); } }}>
           <label htmlFor="admin-token">Admin token</label>
           <input id="admin-token" type="password" autoComplete="off" value={draft} onChange={(event) => setDraft(event.target.value)} required autoFocus />
           <button className="button button-primary button-wide" type="submit">Unlock moderation</button>
         </form>
-        <p className="privacy-note">Your token stays in this tab’s memory and is cleared when you lock or close it.</p>
+        <p className="privacy-note">Your session stays active across reloads in this tab. Lock the session or close the tab to clear it.</p>
       </section>
     </main>
   );
