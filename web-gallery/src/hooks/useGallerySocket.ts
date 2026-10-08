@@ -8,8 +8,28 @@ export const IPFS_GATEWAY = (import.meta.env.VITE_IPFS_GATEWAY || "https://ipfs.
 
 export function artworkImageUrl(item: GalleryItem): string {
   if (item.imageUrl.startsWith("ipfs://")) return `${IPFS_GATEWAY}/${item.imageUrl.slice(7)}`;
-  if (item.imageUrl) return item.imageUrl;
+  if (item.imageUrl) {
+    // Mock IPFS URLs are API-relative; resolve them against the backend, not Vite.
+    if (item.imageUrl.startsWith("/")) return `${API_BASE.replace(/\/+$/, "")}${item.imageUrl}`;
+    return item.imageUrl;
+  }
   return item.imageCID ? `${IPFS_GATEWAY}/${item.imageCID}` : "";
+}
+
+export function artworkImageCandidates(item: GalleryItem): string[] {
+  if (item.imageUrl && !item.imageUrl.startsWith("ipfs://")) {
+    return [artworkImageUrl(item)].filter(Boolean);
+  }
+
+  const ipfsUri = item.imageUrl.startsWith("ipfs://") ? item.imageUrl.slice(7) : item.imageCID;
+  if (!ipfsUri) return [artworkImageUrl(item)].filter(Boolean);
+
+  const cidPath = ipfsUri.replace(/^ipfs\//, "");
+  return [...new Set([
+    `${IPFS_GATEWAY}/${cidPath}`,
+    `https://ipfs.io/ipfs/${cidPath}`,
+    `https://dweb.link/ipfs/${cidPath}`
+  ])];
 }
 
 export interface UseGallerySocketResult {

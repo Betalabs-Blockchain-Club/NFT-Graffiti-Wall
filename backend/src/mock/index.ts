@@ -205,6 +205,13 @@ export function createMockApi(options: MockApiOptions = {}) {
     return res.json({ items, nextCursor });
   });
 
+  // Serve the exact uploaded PNG bytes for the mock IPFS image URL exposed in gallery items.
+  router.get("/mock/ipfs/:cid", (req, res) => {
+    const artwork = [...artworks.values()].find((entry) => entry.item.imageCID === req.params.cid);
+    if (!artwork) return jsonError(res, 404, "not_found", "Image not found");
+    res.type("png").send(artwork.bytes);
+  });
+
   router.post("/api/admin/artworks/:id/approve", (req, res) => {
     if (!requireAdmin(req, res)) return undefined;
     const artwork = findArtwork(req.params.id, res);

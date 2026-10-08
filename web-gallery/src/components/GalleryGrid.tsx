@@ -1,9 +1,9 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { GalleryItem } from "../types";
 import { VoteBar } from "./VoteBar";
-import { artworkImageUrl } from "../hooks/useGallerySocket";
-import { Hash, Sparkles } from "lucide-react";
+import { ArtworkImage } from "./ArtworkImage";
+import { Hash, Sparkles, X } from "lucide-react";
 
 interface GalleryGridProps {
   items: GalleryItem[];
@@ -11,6 +11,7 @@ interface GalleryGridProps {
 }
 
 export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, hasLeaderboard }) => {
+  const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   // Find max votes for scaling vote bars across the grid
   const maxVotes = useMemo(() => {
     let max = 1;
@@ -25,7 +26,6 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, hasLeaderboard 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-5 p-4 md:p-6">
       {items.map((item, index) => {
-        const imageUrl = artworkImageUrl(item);
         const isNewest = index === 0;
 
         return (
@@ -51,19 +51,17 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, hasLeaderboard 
             )}
 
             {/* Artwork Canvas Container */}
-            <div className="relative aspect-square w-full bg-[#0a0c13] flex items-center justify-center p-2 overflow-hidden">
-              <img
-                src={imageUrl}
-                alt={item.nickname}
-                loading="lazy"
-                decoding="async"
+            <button
+              type="button"
+              onClick={() => setSelectedItem(item)}
+              aria-label={`Open artwork by ${item.nickname}`}
+              className="relative aspect-square w-full bg-[#0a0c13] flex items-center justify-center p-2 overflow-hidden cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400"
+            >
+              <ArtworkImage
+                item={item}
                 className="w-full h-full object-contain rounded-lg transition-transform duration-300 group-hover:scale-105"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><rect width='200' height='200' fill='%23131728'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2364748b' font-size='14'>NFT Art</text></svg>";
-                }}
               />
-            </div>
+            </button>
 
             {/* Card Content & Metadata */}
             <div className="p-3 flex flex-col flex-grow justify-between bg-[#11131e]">
@@ -99,6 +97,38 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, hasLeaderboard 
           </motion.div>
         );
       })}
+
+      {selectedItem && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 p-4 md:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Artwork by ${selectedItem.nickname}`}
+          onClick={() => setSelectedItem(null)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setSelectedItem(null);
+          }}
+          tabIndex={-1}
+        >
+          <button
+            type="button"
+            onClick={() => setSelectedItem(null)}
+            aria-label="Close artwork viewer"
+            className="absolute right-4 top-4 z-10 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          <ArtworkImage
+            item={selectedItem}
+            loading="eager"
+            className="max-h-full max-w-full object-contain cursor-zoom-out"
+            onClick={(event) => event.stopPropagation()}
+          />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-4 py-2 text-sm font-semibold text-white">
+            {selectedItem.nickname}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
