@@ -30,8 +30,8 @@ type QueueOptions = {
 		}>;
 	};
 	storage?: {
-		setMinted?(data: Record<string, unknown>): void | Promise<void>;
-		setStatus?(id: string, status: string): void | Promise<void>;
+		setMinted?(data: { id: string; tokenId: number; txHash: string; blockNumber: number; imageCID: string; metadataCID: string }): unknown | Promise<unknown>;
+		setStatus?(id: string, status: string): unknown | Promise<unknown>;
 	};
 	realtime?: { onJob?(job: MintJob): void };
 	moderationMode?: "display_after_approve" | "off";
