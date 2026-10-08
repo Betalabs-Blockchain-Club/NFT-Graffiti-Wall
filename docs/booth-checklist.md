@@ -14,7 +14,7 @@
 - [ ] **Cellular Hotspot:** Turn on dedicated backup phone hotspot; confirm SSID and password taped to back of booth laptop.
 
 ### Service & Network Health (T-20 min)
-- [ ] **Backend Health:** Open browser to `http://<BACKEND_HOST>:3000/api/health` — confirm `{ status: "ok", chain: "connected", ipfs: "connected" }`.
+- [ ] **Backend Health:** Open browser to `http://<BACKEND_HOST>:3001/api/health` — confirm `ok: true`, `chain: true`, `ipfs: true`, and a numeric `queueDepth` and `balanceEth`.
 - [ ] **Minter Gas Balance:** Open Admin Dashboard (`web-admin`). Verify minter account balance > **0.05 test-ETH**.
   - *If low:* Request faucet funds immediately or transfer from reserve admin wallet.
 - [ ] **IPFS Pinning Access:** Perform test pin in Admin panel or verify Pinata JWT quota has >500 pins remaining.
@@ -60,11 +60,20 @@
 
 | Scenario | Symptom | Immediate Action |
 |----------|---------|------------------|
-| **Wi-Fi Drops** | Kiosk cannot reach backend | 1. Switch kiosk & server to mobile hotspot.<br>2. Reassure visitors: *“Your drawing is stored locally in queue and will mint as soon as connection reconnects.”* |
-| **RPC Congestion / Gas Spike** | Minting step takes >30s | 1. Check RPC latency in Admin Dashboard.<br>2. Switch RPC endpoint in `.env` / Admin network toggle.<br>3. Hand visitor their Job ID QR to verify later from their phone. |
-| **IPFS Gateway Timeout** | Images load slowly on phone | 1. Verify page automatically falls back to secondary gateway.<br>2. Fall back to local gateway cache if configured. |
+| **Wi-Fi Drops** | Kiosk cannot reach backend | 1. Switch kiosk & server to mobile hotspot.<br>2. Keep the kiosk page open. If no Job ID was returned, submit again after reconnecting; drawings are not durably queued offline. If a Job ID exists, let status polling resume before retrying. |
+| **RPC Outage / Minter Has No Gas** | Minting retries, then status becomes `failed` | 1. Restore the local RPC or fund the minter.<br>2. Keep the failed Job ID for the incident log.<br>3. Resume new submissions only after `/api/health` reports the chain healthy and the minter has gas. |
+| **IPFS Pinning Outage** | Uploading retries, then status becomes `failed` | 1. Restore Pinata/Kubo.<br>2. Confirm `/api/health` reports IPFS healthy.<br>3. Keep the failed Job ID and ask the visitor before submitting a new job. |
 | **Inappropriate / Offensive Art** | Obscene tag submitted | 1. Moderator clicks **Hide** in `web-admin` (<2 clicks, vanishes from TV instantly).<br>2. Calmly reassure visitors: *“Our live moderation filter caught and removed that tag.”* |
 | **Total Outage (No Internet)** | Expo power / network blackout | 1. Activate **Offline Fallback Plan** ([`docs/booth/fallback-plan.md`](./booth/fallback-plan.md)).<br>2. Run local mock gallery + video loop. |
+
+### Q1 Local Reliability Drill Results (2026-10-08)
+
+- **20-mint load:** 20/20 jobs reached `confirmed`; no jobs were lost. The same-device probe received 400 for five malformed uploads, then 429 with `Retry-After: 60`.
+- **IPFS stopped:** the accepted job retried through attempt 3 and reached `failed`.
+- **RPC stopped:** the accepted job retried through attempt 3 and reached `failed`; Hardhat was restarted and the local contract redeployed afterward.
+- **Minter balance set to zero:** the accepted job retried through attempt 3 and reached `failed`; the local balance was restored to 10,000 ETH.
+- **Kill switch enabled:** valid artwork POST returned 503 while health and gallery GET remained available. The switch was restored to off.
+- **Secret scan:** no `MINTER_PRIVATE_KEY` or `PINATA_JWT` name/value appeared in the captured backend log or probed health, gallery, and failed-job responses.
 
 ---
 
