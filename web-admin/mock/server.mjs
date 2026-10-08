@@ -4,6 +4,11 @@ import { createServer } from "node:http";
 const port = Number(process.env.PORT ?? 3001);
 const adminToken = process.env.ADMIN_TOKEN ?? "mock-admin-token";
 const colors = ["#fa6b4a", "#b2ef62", "#aa8cff", "#53d4d1", "#f6b74a", "#ee7db0"];
+const config = {
+  MODERATION_MODE: "display_after_approve",
+  KILL_SWITCH: false,
+  IPFS_PROVIDER: "pinata"
+};
 const starters = [
   ["wall-art-101", "Mira", "pending"],
   ["wall-art-102", "sprayday", "pending"],
@@ -43,10 +48,10 @@ function escapeXml(value) {
   return value.replace(/[<>&"']/g, (char) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[char]);
 }
 
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
 
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
@@ -62,6 +67,48 @@ const server = createServer((req, res) => {
     return sendJson(res, 200, { items, nextCursor });
   }
 
+  if (req.method === "GET" && url.pathname === "/api/health") {
+    const balance = process.env.MOCK_BALANCE_ETH === undefined ? 0.25 : Number(process.env.MOCK_BALANCE_ETH);
+    const chain = process.env.MOCK_CHAIN_STATUS !== "down";
+    const ipfs = process.env.MOCK_IPFS_STATUS !== "down";
+    const queueDepth = [...records.values()].filter((item) => item.status === "pending" || item.status === "minted").length;
+    const balanceEth = Number.isFinite(balance) && balance >= 0 ? balance : false;
+    return sendJson(res, 200, { ok: chain && ipfs && balanceEth !== false, chain, ipfs, queueDepth, balanceEth });
+  }
+
+  if (req.method === "PUT" && url.pathname === "/api/admin/config") {
+    if (!authorized(req)) return unauthorized(res);
+    let body;
+    try {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : {};
+    } catch { return sendJson(res, 400, { code: "invalid-config", message: "Config must be valid JSON." }); }
+    if (!body || typeof body !== "object" || Array.isArray(body)) return sendJson(res, 400, { code: "invalid-config", message: "Config must be an object." });
+    const valid = Object.entries(body).every(([key, value]) =>
+      key === "MODERATION_MODE" ? value === "display_after_approve" || value === "mint_after_approve"
+        : key === "KILL_SWITCH" ? typeof value === "boolean"
+          : key === "IPFS_PROVIDER" ? value === "pinata" || value === "kubo" : false);
+    if (!valid) return sendJson(res, 400, { code: "invalid-config", message: "Unsupported config key or value." });
+    Object.assign(config, body);
+    return sendJson(res, 200, { ...config });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/reset") {
+    if (!authorized(req)) return unauthorized(res);
+    let body;
+    try {
+      const chunks = [];
+      for await (const chunk of req) chunks.push(chunk);
+      body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    } catch { return sendJson(res, 400, { code: "invalid-confirmation", message: "Exact archive confirmation is required." }); }
+    const expected = `ARCHIVE ${new Date().toISOString().slice(0, 10)}`;
+    if (body?.confirm !== expected) return sendJson(res, 400, { code: "invalid-confirmation", message: `Type exactly ${expected} to continue.` });
+    const artworkCount = records.size;
+    records.clear();
+    return sendJson(res, 200, { ok: true, archiveId: `mock-archive-${Date.now()}`, artworkCount, voteCount: 0 });
+  }
+
   if (req.method === "POST" && url.pathname.startsWith("/api/admin/artworks/")) {
     if (!authorized(req)) return unauthorized(res);
     const match = url.pathname.match(/^\/api\/admin\/artworks\/([^/]+)\/(approve|hide)$/);
@@ -71,6 +118,11 @@ const server = createServer((req, res) => {
     if (!item) return sendJson(res, 404, { code: "not-found", message: "Artwork not found." });
     item.status = match[2] === "hide" ? "hidden" : "approved";
     return sendJson(res, 200, { item: { ...item } });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/artworks") {
+    if (config.KILL_SWITCH) return sendJson(res, 503, { code: "kill-switch", message: "Minting is temporarily disabled." });
+    return sendJson(res, 202, { jobId: "mock-submission", status: "pending" });
   }
 
   if (req.method === "GET" && url.pathname.startsWith("/mock/ipfs/")) {

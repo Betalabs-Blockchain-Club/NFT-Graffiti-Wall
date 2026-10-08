@@ -4,8 +4,8 @@
 Staff-only control room: approve/hide art before it hits the public wall, monitor mint health + wallet balance, flip network mode / kill switch, reset day. Speed matters — hide in <2 clicks.
 
 ## 2. Inputs
-- `GET /api/gallery?status=pending|minted` (queue), `GET /api/health`, `GET /api/leaderboard`.
-- Actions (Bearer `ADMIN_TOKEN`): `POST /api/admin/artworks/:id/approve|hide`, `POST /api/admin/reset`, `PUT /api/admin/config {MODERATION_MODE, KILL_SWITCH}`.
+- `GET /api/gallery?status=pending|minted|hidden` (queue), `GET /api/health`, `GET /api/leaderboard`.
+- Actions (Bearer `ADMIN_TOKEN`): `POST /api/admin/artworks/:id/approve|hide`, `POST /api/admin/reset {confirm:'ARCHIVE YYYY-MM-DD'}`, `PUT /api/admin/config {MODERATION_MODE, KILL_SWITCH, IPFS_PROVIDER}`.
 - Env: `VITE_API_URL`.
 
 ## 3. Outputs
@@ -14,10 +14,11 @@ Staff-only control room: approve/hide art before it hits the public wall, monito
 
 ## 4. Functions / Responsibilities
 1. `pages/Queue.tsx` — pending grid with big Approve/Hide, nickname filter highlight.
-2. `components/NetworkSwitch.tsx` — `pinata|kubo`, `testnet|localhost` (via backend config).
-3. `components/QueueHealth.tsx` — depth, stages, last error, balance.
-4. Auth: store `ADMIN_TOKEN` in memory (not localStorage on shared laptop), auto-lock after 5 min.
-5. Reset flow requires typed confirm ("ARCHIVE 2026-10-01").
+2. `pages/Dashboard.tsx` — live health, runtime controls, typed archive reset.
+3. `components/NetworkSwitch.tsx` — `pinata|kubo`, moderation mode, and minting kill switch (via backend config).
+4. `components/QueueHealth.tsx` — chain/IPFS status, queue depth, and wallet balance; red alert below `0.01 ETH`.
+5. Auth: store `ADMIN_TOKEN` in memory (not localStorage on shared laptop), auto-lock after 5 min.
+6. Reset flow requires the exact current UTC confirmation phrase.
 
 ## 5. Interfaces
 - Only writer of moderation states. Gallery/kiosk never change status.
