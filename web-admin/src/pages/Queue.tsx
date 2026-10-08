@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, artworkImageUrl, clearMintRequests, getArtworkJob, hideArtwork, listQueue, mintArtwork, retryArtworkIpfs, restoreArtwork, type AdminJob } from "../lib/api";
+import { ApiError, clearMintRequests, getArtworkJob, hideArtwork, listQueue, mintArtwork, retryArtworkIpfs, restoreArtwork, type AdminJob } from "../lib/api";
 import { AdminHeader, type AdminPage } from "../components/AdminHeader";
+import { ArtworkPreview } from "../components/ArtworkPreview";
 import type { GalleryItem, QueueStatus } from "../types";
 
 const tabs: Array<{ id: QueueStatus; label: string }> = [
@@ -132,7 +133,7 @@ export function Queue({ token, onLock, onUnauthorized, onNavigate }: QueueProps)
           : <section className="art-grid" aria-label={`${status} artwork`}>
             {items.map((item) => <article className="art-card" key={item.id}>
               <div className="art-preview">
-                {artworkImageUrl(item) ? <img src={artworkImageUrl(item)} alt={`Artwork submitted by ${item.nickname}`} loading="lazy" /> : <span className="preview-fallback">Artwork preview unavailable</span>}
+                <ArtworkPreview item={item} />
                 <span className={`status-pill status-${item.status}`}>{item.status}</span>
               </div>
               <div className="art-details">

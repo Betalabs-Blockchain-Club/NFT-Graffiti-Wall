@@ -26,13 +26,14 @@ export function Nickname() {
 
   const validation = useMemo(() => validateNickname(nickname), [nickname]);
   const error = touched && !validation.ok ? validationMessage(validation.reason) : null;
-  const previewUrl = useMemo(() => artwork ? URL.createObjectURL(artwork.blob) : null, [artwork]);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
+    if (!artwork) { setPreviewUrl(null); return; }
+    const url = URL.createObjectURL(artwork.blob);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [artwork]);
 
   if (!artwork) {
     return (

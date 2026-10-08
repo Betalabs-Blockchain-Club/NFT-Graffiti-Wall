@@ -6,14 +6,19 @@ export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 export const WS_BASE = import.meta.env.VITE_WS_URL || API_BASE;
 export const IPFS_GATEWAY = (import.meta.env.VITE_IPFS_GATEWAY || "https://ipfs.io/ipfs").replace(/\/+$/, "");
 
+function gatewayImageUrl(cid: string, gateway = IPFS_GATEWAY): string {
+  const base = gateway.replace(/\/+$/, "");
+  return `${base.endsWith("/ipfs") ? base : `${base}/ipfs`}/${cid}`;
+}
+
 export function artworkImageUrl(item: GalleryItem): string {
-  if (item.imageUrl.startsWith("ipfs://")) return `${IPFS_GATEWAY}/${item.imageUrl.slice(7)}`;
+  if (item.imageUrl.startsWith("ipfs://")) return gatewayImageUrl(item.imageUrl.slice(7));
   if (item.imageUrl) {
     // Mock IPFS URLs are API-relative; resolve them against the backend, not Vite.
     if (item.imageUrl.startsWith("/")) return `${API_BASE.replace(/\/+$/, "")}${item.imageUrl}`;
     return item.imageUrl;
   }
-  return item.imageCID ? `${IPFS_GATEWAY}/${item.imageCID}` : "";
+  return item.imageCID ? gatewayImageUrl(item.imageCID) : "";
 }
 
 export function artworkImageCandidates(item: GalleryItem): string[] {
@@ -26,9 +31,9 @@ export function artworkImageCandidates(item: GalleryItem): string[] {
 
   const cidPath = ipfsUri.replace(/^ipfs\//, "");
   return [...new Set([
-    `${IPFS_GATEWAY}/${cidPath}`,
-    `https://ipfs.io/ipfs/${cidPath}`,
-    `https://dweb.link/ipfs/${cidPath}`
+    gatewayImageUrl(cidPath),
+    gatewayImageUrl(cidPath, "https://ipfs.io"),
+    gatewayImageUrl(cidPath, "https://dweb.link")
   ])];
 }
 

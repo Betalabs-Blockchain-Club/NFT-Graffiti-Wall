@@ -127,11 +127,28 @@ export function getArtworkJob(id: string, token: string): Promise<AdminJob> {
   return request<AdminJob>(`/api/artworks/${encodeURIComponent(id)}/status`, token);
 }
 
+function ipfsGatewayUrl(cid: string, gateway: string): string {
+  const base = gateway.replace(/\/+$/, "");
+  return `${base.endsWith("/ipfs") ? base : `${base}/ipfs`}/${cid}`;
+}
+
+export function artworkImageCandidates(item: GalleryItem): string[] {
+  const rawUrl = item.imageUrl ?? "";
+  if (rawUrl && !rawUrl.startsWith("ipfs://")) {
+    try { return [new URL(rawUrl, apiBase || window.location.origin).toString()]; }
+    catch { return []; }
+  }
+
+  const cid = (rawUrl.startsWith("ipfs://") ? rawUrl.slice("ipfs://".length) : item.imageCID).replace(/^ipfs\//, "");
+  if (!cid) return [];
+  const configuredGateway = (import.meta.env.VITE_IPFS_GATEWAY ?? "https://ipfs.io").replace(/\/+$/, "");
+  return [...new Set([
+    ipfsGatewayUrl(cid, configuredGateway),
+    ipfsGatewayUrl(cid, "https://ipfs.io"),
+    ipfsGatewayUrl(cid, "https://dweb.link")
+  ])];
+}
+
 export function artworkImageUrl(item: GalleryItem): string {
-  const candidate = item.imageUrl || (item.imageCID
-    ? `${(import.meta.env.VITE_IPFS_GATEWAY ?? "").replace(/\/+$/, "")}/ipfs/${encodeURIComponent(item.imageCID)}`
-    : "");
-  if (!candidate) return "";
-  try { return new URL(candidate, apiBase || window.location.origin).toString(); }
-  catch { return ""; }
+  return artworkImageCandidates(item)[0] ?? "";
 }

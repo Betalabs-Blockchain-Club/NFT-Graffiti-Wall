@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Queue } from "./pages/Queue";
 import { Dashboard } from "./pages/Dashboard";
+import { Gallery } from "./pages/Gallery";
 import type { AdminPage } from "./components/AdminHeader";
 
 const IDLE_LIMIT_MS = 5 * 60 * 1000;
@@ -36,9 +37,9 @@ export default function App() {
 
   if (token) {
     const lockSession = () => { lock(); setPage("queue"); };
-    return page === "dashboard"
-      ? <Dashboard token={token} onLock={lockSession} onUnauthorized={rejectToken} onNavigate={setPage} />
-      : <Queue token={token} onLock={lockSession} onUnauthorized={rejectToken} onNavigate={setPage} />;
+    if (page === "dashboard") return <Dashboard token={token} onLock={lockSession} onUnauthorized={rejectToken} onNavigate={setPage} />;
+    if (page === "gallery") return <Gallery token={token} onLock={lockSession} onUnauthorized={rejectToken} onNavigate={setPage} />;
+    return <Queue token={token} onLock={lockSession} onUnauthorized={rejectToken} onNavigate={setPage} />;
   }
 
   return (
