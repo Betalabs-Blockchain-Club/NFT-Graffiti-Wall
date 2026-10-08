@@ -118,7 +118,10 @@ describe("B0 mock API", () => {
     const namespaces = new Map<string, { handlers: Map<string, (socket: unknown) => void>; events: unknown[] }>();
     const io = {
       of(path: string) {
-        const namespace = { handlers: new Map(), events: [] };
+        const namespace: { handlers: Map<string, (socket: unknown) => void>; events: unknown[] } = {
+          handlers: new Map(),
+          events: []
+        };
         namespaces.set(path, namespace);
         return {
           on(event: string, listener: (socket: unknown) => void) {
