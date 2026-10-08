@@ -5,7 +5,7 @@ export type VerificationStage = "chain" | "image" | "hash";
 export interface VerifyConfig { rpcUrl: string; contractAddress: string; ipfsGateways: string[]; chainId?: string; explorerUrl?: string; }
 export interface VerificationResult {
   tokenId: bigint; nickname: string; ipfsCID: string; timestamp: bigint; creator: string;
-  onChainHash: string; recomputedHash: string; verified: boolean; imageUrl: string; explorerUrl?: string;
+  onChainHash: string; recomputedHash: string; verified: boolean; imageUrl: string; imageBytes: ArrayBuffer; explorerUrl?: string;
 }
 export class VerificationError extends Error {
   constructor(public readonly kind: "configuration" | "not-found" | "chain" | "gateway", message: string) {
@@ -84,5 +84,5 @@ export async function verifyToken(tokenIdText: string, config: VerifyConfig, onS
   const explorerUrl = config.explorerUrl ? `${config.explorerUrl.replace(/\/+$/, "")}/address/${config.contractAddress}` : undefined;
   return { tokenId, nickname: artwork.nickname, ipfsCID: artwork.ipfsCID, timestamp: artwork.timestamp, creator: artwork.creator,
     onChainHash: artwork.artworkHash, recomputedHash,
-    verified: contractVerified && recomputedHash.toLowerCase() === artwork.artworkHash.toLowerCase(), imageUrl, explorerUrl };
+    verified: contractVerified && recomputedHash.toLowerCase() === artwork.artworkHash.toLowerCase(), imageUrl, imageBytes: bytes, explorerUrl };
 }
