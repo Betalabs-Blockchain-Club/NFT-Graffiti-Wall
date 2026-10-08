@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS artworks (
   block_number INTEGER,
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending','minted','approved','hidden','failed')),
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  archived_at TEXT
 );
 CREATE TABLE IF NOT EXISTS votes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,4 +23,10 @@ CREATE TABLE IF NOT EXISTS votes (
 CREATE TABLE IF NOT EXISTS config (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS archive_batches (
+  id TEXT PRIMARY KEY,
+  created_at TEXT NOT NULL,
+  artwork_count INTEGER NOT NULL,
+  vote_count INTEGER NOT NULL
 );
