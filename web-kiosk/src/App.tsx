@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Check, ChevronLeft, Palette, TimerReset } from "lucide-react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Attract } from "./pages/Attract";
@@ -7,7 +5,6 @@ import { Draw } from "./pages/Draw";
 import { Nickname } from "./pages/Nickname";
 import { Progress } from "./pages/Progress";
 import { Certificate } from "./pages/Certificate";
-import { kioskConfig } from "./lib/config";
 
 const screens = [
   { path: "/draw", label: "Draw", icon: Palette },
@@ -36,27 +33,6 @@ function PlaceholderScreen({ title, description, next, nextLabel }: {
   );
 }
 
-function IdleReset() {
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    let timer = window.setTimeout(() => navigate("/", { replace: true }), kioskConfig.idleTimeoutMs);
-    const resetTimer = () => {
-      window.clearTimeout(timer);
-      timer = window.setTimeout(() => navigate("/", { replace: true }), kioskConfig.idleTimeoutMs);
-    };
-    const events = ["pointerdown", "pointermove", "keydown", "touchstart"] as const;
-    events.forEach((event) => window.addEventListener(event, resetTimer, { passive: true }));
-    return () => {
-      window.clearTimeout(timer);
-      events.forEach((event) => window.removeEventListener(event, resetTimer));
-    };
-  }, [location.pathname, navigate]);
-
-  return null;
-}
-
 function FlowHeader() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -78,25 +54,19 @@ function FlowHeader() {
 }
 
 export default function App() {
-  const location = useLocation();
   const navigate = useNavigate();
 
   return (
     <div className="app-shell">
-      <IdleReset />
       <FlowHeader />
-      <AnimatePresence mode="wait">
-        <motion.div key={location.pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-          <Routes>
-            <Route path="/" element={<Attract onStart={() => navigate("/draw")} />} />
-            <Route path="/draw" element={<Draw />} />
-            <Route path="/nickname" element={<Nickname />} />
-            <Route path="/progress" element={<Progress />} />
-            <Route path="/certificate" element={<Certificate />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </motion.div>
-      </AnimatePresence>
+      <Routes>
+        <Route path="/" element={<Attract onStart={() => navigate("/draw")} />} />
+        <Route path="/draw" element={<Draw />} />
+        <Route path="/nickname" element={<Nickname />} />
+        <Route path="/progress" element={<Progress />} />
+        <Route path="/certificate" element={<Certificate />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
   );
 }

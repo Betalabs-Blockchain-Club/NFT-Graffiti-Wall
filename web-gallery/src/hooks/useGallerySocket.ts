@@ -176,9 +176,9 @@ export function useGallerySocket(): UseGallerySocketResult {
 
     // Handle new artwork event
     socket.on("new", (newItem: GalleryItem) => {
-      if (!newItem || !newItem.id || hiddenIdsRef.current.has(newItem.id)) {
-        return;
-      }
+      if (!newItem || !newItem.id) return;
+      // A "new" event is also sent when staff restores hidden artwork.
+      hiddenIdsRef.current.delete(newItem.id);
 
       setItems((prev) => {
         // Deduplicate by ID
