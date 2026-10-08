@@ -166,7 +166,7 @@ export function createApiClient({ baseUrl, adminToken, fetchImpl = fetch }: ApiC
   }
 
   return {
-    submitArtwork(blob: Blob, nickname: string, clientHash: string, deviceId: string) {
+    submitArtwork(blob: Blob, nickname: string, clientHash: string, deviceId: string, idempotencyKey?: string) {
       const form = new FormData();
       form.append("image", blob, "artwork.png");
       form.append("nickname", nickname);
@@ -174,7 +174,7 @@ export function createApiClient({ baseUrl, adminToken, fetchImpl = fetch }: ApiC
 
       return request("/api/artworks", SubmitArtworkResponseSchema, {
         method: "POST",
-        headers: { "X-Device-Id": deviceId },
+        headers: { "X-Device-Id": deviceId, ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}) },
         body: form
       });
     },

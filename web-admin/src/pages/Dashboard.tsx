@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { AdminHeader, type AdminPage } from "../components/AdminHeader";
 import { NetworkSwitch } from "../components/NetworkSwitch";
 import { QueueHealth } from "../components/QueueHealth";
-import { ApiError, archiveWall, getAdminConfig, getHealth, updateAdminConfig, type AdminConfig, type HealthSummary } from "../lib/api";
+import { ApiError, archiveWall, clearGallery as clearGalleryApi, getAdminConfig, getHealth, updateAdminConfig, type AdminConfig, type HealthSummary } from "../lib/api";
 
 interface DashboardProps {
   token: string;
@@ -22,6 +22,8 @@ export function Dashboard({ token, onLock, onUnauthorized, onNavigate }: Dashboa
   const [typedConfirmation, setTypedConfirmation] = useState("");
   const [resetError, setResetError] = useState("");
   const [resetBusy, setResetBusy] = useState(false);
+  const [clearingGallery, setClearingGallery] = useState(false);
+  const [clearGalleryError, setClearGalleryError] = useState("");
   const [notice, setNotice] = useState("");
 
   const refreshHealth = useCallback(async () => {
@@ -83,6 +85,21 @@ export function Dashboard({ token, onLock, onUnauthorized, onNavigate }: Dashboa
     } finally { setResetBusy(false); }
   }
 
+  async function clearGallery() {
+    if (!window.confirm("Clear the public gallery? Published artwork and its votes will be archived. Other queue items will stay.")) return;
+    setClearingGallery(true);
+    setClearGalleryError("");
+    setNotice("");
+    try {
+      const result = await clearGalleryApi(token);
+      setNotice(`Gallery cleared: ${result.artworkCount} artworks and ${result.voteCount} votes archived.`);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "The gallery could not be cleared.";
+      if (cause instanceof ApiError && cause.status === 401) onUnauthorized(message);
+      else setClearGalleryError(message);
+    } finally { setClearingGallery(false); }
+  }
+
   return (
     <main className="admin-shell">
       <AdminHeader page="dashboard" onNavigate={onNavigate} onLock={onLock} />
@@ -97,7 +114,12 @@ export function Dashboard({ token, onLock, onUnauthorized, onNavigate }: Dashboa
       <div className="dashboard-grid">
         <NetworkSwitch config={config} saving={saving} onChange={(patch) => void saveConfig(patch)} />
         <section className="settings-card reset-card" aria-labelledby="reset-title">
-          <p className="eyebrow eyebrow-danger">DANGER ZONE</p><h2 id="reset-title">Archive today’s wall</h2>
+          <p className="eyebrow eyebrow-danger">DANGER ZONE</p><h2 id="reset-title">Wall cleanup</h2>
+          <p className="muted">Clear published work and its votes while keeping pending mint requests.</p>
+          {clearGalleryError && <p className="reset-error" role="alert">{clearGalleryError}</p>}
+          <button className="button button-danger reset-button" type="button" onClick={() => void clearGallery()} disabled={clearingGallery || resetBusy}>{clearingGallery ? "Clearing gallery…" : "Clear gallery"}</button>
+          <hr className="reset-divider" />
+          <h2>Archive all active artwork</h2>
           <p className="muted">Archives all active artwork and votes. This cannot be undone from the dashboard.</p>
           <form onSubmit={(event) => void resetWall(event)}>
             <label htmlFor="archive-confirm">Type <code>{confirmationPhrase}</code> to confirm</label>

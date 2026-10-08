@@ -68,8 +68,24 @@ export interface ArchiveResult {
   voteCount: number;
 }
 
+export interface ClearQueueResult {
+  ok: boolean;
+  archiveId: string;
+  artworkCount: number;
+  voteCount: number;
+  skippedMintingCount?: number;
+}
+
 export function archiveWall(confirm: string, token: string): Promise<ArchiveResult> {
   return request<ArchiveResult>("/api/admin/reset", token, { method: "POST", body: JSON.stringify({ confirm }) });
+}
+
+export function clearGallery(token: string): Promise<ClearQueueResult> {
+  return request<ClearQueueResult>("/api/admin/clear-gallery", token, { method: "POST", body: JSON.stringify({ confirm: "CLEAR GALLERY" }) });
+}
+
+export function clearMintRequests(token: string): Promise<ClearQueueResult> {
+  return request<ClearQueueResult>("/api/admin/clear-mint-requests", token, { method: "POST", body: JSON.stringify({ confirm: "CLEAR MINT REQUESTS" }) });
 }
 
 export async function listQueue(status: QueueStatus, token: string): Promise<GalleryItem[]> {

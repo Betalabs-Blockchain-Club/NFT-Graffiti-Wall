@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS artworks (
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending','minted','approved','hidden','failed')),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  archived_at TEXT
+  archived_at TEXT,
+  idempotency_key TEXT
 );
 CREATE TABLE IF NOT EXISTS votes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

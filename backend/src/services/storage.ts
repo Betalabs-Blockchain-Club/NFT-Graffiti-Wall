@@ -6,7 +6,7 @@ import { artworkFromRow, DEFAULT_CONFIG, GALLERY_STATUSES, toGalleryItem, validC
   type Artwork, type ArtworkRow, type ArtworkStatus, type Config, type GalleryStatus } from "../db/types.js";
 
 export interface InsertArtwork {
-  id: string; nickname: string; sha256: string; imageCID?: string; metadataCID?: string; createdAt?: string;
+  id: string; nickname: string; sha256: string; imageCID?: string; metadataCID?: string; createdAt?: string; idempotencyKey?: string;
 }
 export interface MintedArtwork {
   id: string; tokenId: number; txHash: string; blockNumber: number; imageCID: string; metadataCID: string;
@@ -24,7 +24,11 @@ export function createStorage(dbPathOrDb: string | Database.Database) {
   if (!columns.some((column) => column.name === "archived_at")) {
     db.exec("ALTER TABLE artworks ADD COLUMN archived_at TEXT");
   }
+  if (!columns.some((column) => column.name === "idempotency_key")) {
+    db.exec("ALTER TABLE artworks ADD COLUMN idempotency_key TEXT");
+  }
   db.exec("CREATE INDEX IF NOT EXISTS artworks_gallery ON artworks(status, archived_at, created_at DESC, id DESC)");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS artworks_idempotency_key ON artworks(idempotency_key) WHERE idempotency_key IS NOT NULL");
   db.exec("CREATE INDEX IF NOT EXISTS votes_artwork ON votes(artwork_id)");
   db.transaction(() => {
     for (const [key, value] of Object.entries(DEFAULT_CONFIG)) {
@@ -79,11 +83,15 @@ export function createStorage(dbPathOrDb: string | Database.Database) {
       const date = input.createdAt === undefined ? new Date() : new Date(input.createdAt);
       if (!Number.isFinite(date.getTime())) throw new StorageError("invalid-input", "Invalid creation date");
       // New submissions cannot set their own moderation status or mint receipt.
-      db.prepare("INSERT INTO artworks(id,nickname,sha256,image_cid,metadata_cid,status,created_at) VALUES (?,?,?,?,?,'pending',?)")
-        .run(input.id, input.nickname, input.sha256.toLowerCase(), input.imageCID ?? null, input.metadataCID ?? null, date.toISOString());
+      db.prepare("INSERT INTO artworks(id,nickname,sha256,image_cid,metadata_cid,status,created_at,idempotency_key) VALUES (?,?,?,?,?,'pending',?,?)")
+        .run(input.id, input.nickname, input.sha256.toLowerCase(), input.imageCID ?? null, input.metadataCID ?? null, date.toISOString(), input.idempotencyKey ?? null);
       return mustExist(input.id);
     },
     getById,
+    getByIdempotencyKey(key: string): Artwork | undefined {
+      const row = db.prepare("SELECT * FROM artworks WHERE idempotency_key=?").get(key) as ArtworkRow | undefined;
+      return row ? artworkFromRow(row) : undefined;
+    },
     setPinned(id: string, imageCID: string, metadataCID: string): Artwork {
       mustExist(id);
       requiredString(imageCID, "imageCID"); requiredString(metadataCID, "metadataCID");
@@ -153,6 +161,30 @@ export function createStorage(dbPathOrDb: string | Database.Database) {
         JOIN artworks a ON a.id=v.artwork_id WHERE a.archived_at IS NULL AND a.status='approved'
         GROUP BY v.artwork_id,v.category ORDER BY votes DESC,v.artwork_id ASC,v.category ASC`).all() as
         { artworkId: string; category: string; votes: number }[];
+    },
+    archiveByStatus(status: ArtworkStatus, excludedIds: string[] = []) {
+      if (!(GALLERY_STATUSES as readonly string[]).includes(status) && status !== "failed") {
+        throw new StorageError("invalid-input", "Invalid artwork status");
+      }
+      const excludeSql = excludedIds.length ? ` AND id NOT IN (${excludedIds.map(() => "?").join(",")})` : "";
+      const excludeVoteSql = excludedIds.length ? ` AND a.id NOT IN (${excludedIds.map(() => "?").join(",")})` : "";
+      return db.transaction(() => {
+        const rows = db.prepare(`SELECT id FROM artworks WHERE archived_at IS NULL AND status=?${excludeSql}`)
+          .all(status, ...excludedIds) as { id: string }[];
+        const ids = rows.map(({ id }) => id);
+        const voteCount = ids.length ? (db.prepare(`SELECT COUNT(*) AS count FROM votes v
+          JOIN artworks a ON a.id=v.artwork_id WHERE a.archived_at IS NULL AND a.status=?${excludeVoteSql}`)
+          .get(status, ...excludedIds) as { count: number }).count : 0;
+        const archiveId = randomUUID();
+        const createdAt = new Date().toISOString();
+        db.prepare("INSERT INTO archive_batches(id,created_at,artwork_count,vote_count) VALUES (?,?,?,?)")
+          .run(archiveId, createdAt, ids.length, voteCount);
+        if (ids.length) {
+          db.prepare(`UPDATE artworks SET archived_at=? WHERE archived_at IS NULL AND status=?${excludeSql}`)
+            .run(createdAt, status, ...excludedIds);
+        }
+        return { archiveId, artworkCount: ids.length, voteCount, ids };
+      })();
     },
     archiveAll: db.transaction(() => {
       const artworkCount = (db.prepare("SELECT COUNT(*) AS count FROM artworks WHERE archived_at IS NULL").get() as { count: number }).count;

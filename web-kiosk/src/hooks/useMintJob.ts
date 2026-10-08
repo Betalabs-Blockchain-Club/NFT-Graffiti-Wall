@@ -59,11 +59,13 @@ export type MintJobController = {
   retry: () => Promise<void>;
 };
 
-export function useMintJob(artwork: ArtworkExport | undefined, nickname: string | undefined): MintJobController {
+export function useMintJob(artwork: ArtworkExport | undefined, nickname: string | undefined, submissionId?: string): MintJobController {
   const client = useMemo(() => createApiClient({ baseUrl: kioskConfig.apiUrl }), []);
   const socketRef = useRef<Socket | null>(null);
   const jobIdRef = useRef<string>();
   const submittingRef = useRef(false);
+  const fallbackSubmissionIdRef = useRef(globalThis.crypto?.randomUUID?.() ?? `submission-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const idempotencyKey = submissionId ?? fallbackSubmissionIdRef.current;
   const [job, setJob] = useState<MintJobState>({ hash: artwork?.clientHash ?? "", retry: 0 });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -79,7 +81,7 @@ export function useMintJob(artwork: ArtworkExport | undefined, nickname: string 
     setIsSubmitting(true);
     setJob({ hash: artwork.clientHash, retry: 0 });
     try {
-      const response = await client.submitArtwork(artwork.blob, nickname, artwork.clientHash, deviceId());
+      const response = await client.submitArtwork(artwork.blob, nickname, artwork.clientHash, deviceId(), idempotencyKey);
       jobIdRef.current = response.jobId;
       setJob({ jobId: response.jobId, stage: "hashing", hash: artwork.clientHash, retry: 0 });
     } catch (error) {
@@ -88,7 +90,7 @@ export function useMintJob(artwork: ArtworkExport | undefined, nickname: string 
       submittingRef.current = false;
       setIsSubmitting(false);
     }
-  }, [artwork, client, nickname]);
+  }, [artwork, client, idempotencyKey, nickname]);
 
   const retry = useCallback(async () => {
     if (job.stage !== "failed") return;

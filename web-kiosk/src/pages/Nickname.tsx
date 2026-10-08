@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, ChevronLeft, Sparkles } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { validateNickname } from "@graffiti/shared/nickname";
 import type { ArtworkExport } from "../components/DrawingCanvas/DrawingCanvas";
 
 type NicknameLocationState = { artwork?: ArtworkExport };
+function newSubmissionId() {
+  return globalThis.crypto?.randomUUID?.() ?? `submission-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 function validationMessage(reason: "empty" | "too_long" | "profanity") {
   if (reason === "profanity") return "Try a different nickname so everyone can enjoy the wall.";
@@ -19,6 +22,7 @@ export function Nickname() {
   const [nickname, setNickname] = useState("");
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const validation = useMemo(() => validateNickname(nickname), [nickname]);
   const error = touched && !validation.ok ? validationMessage(validation.reason) : null;
@@ -46,9 +50,10 @@ export function Nickname() {
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setTouched(true);
-    if (!validation.ok || submitting) return;
+    if (!validation.ok || submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
-    navigate("/progress", { state: { artwork, nickname: validation.value } });
+    navigate("/progress", { state: { artwork, nickname: validation.value, submissionId: newSubmissionId() } });
   };
 
   return (

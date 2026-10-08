@@ -310,6 +310,8 @@ Base: `http://localhost:3001`
 | POST | `/api/votes` | Cast vote (deduplicated by artwork/category/voter key) |
 | GET | `/api/leaderboard` | Tallies |
 | POST | `/api/admin/reset` | Archive day's data |
+| POST | `/api/admin/clear-gallery` | Archive published gallery artwork and emit hide events |
+| POST | `/api/admin/clear-mint-requests` | Cancel and archive pending submissions |
 | Socket.IO `/gallery` | `new` / `hide` | New/hidden artwork events |
 | Socket.IO `/status` | `subscribe(jobId)` / `job` | Mint progress for kiosk |
 

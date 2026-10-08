@@ -41,6 +41,7 @@ h1, h2 { font-family: "Space Grotesk", sans-serif; letter-spacing: -.035em; }
 .queue-heading h1 { margin-bottom: 8px; font-size: clamp(2rem, 4vw, 2.65rem); }
 .queue-heading .muted { margin-bottom: 0; }
 .queue-heading .button { margin-bottom: 3px; }
+.queue-heading-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
 .queue-tabs { display: flex; gap: 5px; border-bottom: 1px solid #303444; }
 .queue-tab { display: inline-flex; align-items: center; gap: 9px; padding: 13px 15px; color: #8f96a9; border: 0; border-bottom: 2px solid transparent; background: transparent; font-weight: 600; }
 .queue-tab:hover { color: #e5e7ee; }
@@ -134,6 +135,7 @@ h1, h2 { font-family: "Space Grotesk", sans-serif; letter-spacing: -.035em; }
 .reset-card label code { display: inline-block; padding: 2px 6px; border-radius: 4px; color: #ffd1cf; background: #46272d; font: .76rem ui-monospace, monospace; }
 .reset-card input { min-width: 0; min-height: 43px; padding: 0 11px; border: 1px solid #624248; border-radius: 8px; color: #f6f6fa; background: #151821; }
 .reset-button { min-height: 43px; }
+.reset-divider { height: 1px; margin: 23px 0; border: 0; background: #54363b; }
 .reset-button:disabled { opacity: .42; cursor: not-allowed; }
 .reset-error { margin: 0; color: #ffaaa7; font-size: .78rem; }
 @media (max-width: 900px) { .health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dashboard-grid { grid-template-columns: 1fr; } }

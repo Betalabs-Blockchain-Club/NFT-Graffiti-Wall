@@ -5,7 +5,7 @@ Staff-only control room: mint prepared art to publish it, hide published work, m
 
 ## 2. Inputs
 - `GET /api/gallery?status=pending|approved|minted|hidden` (queue), `GET /api/health`.
-- Actions (Bearer `ADMIN_TOKEN`): `POST /api/admin/artworks/:id/mint|hide|restore|retry-ipfs`, `POST /api/admin/reset {confirm:'ARCHIVE YYYY-MM-DD'}`, `PUT /api/admin/config {KILL_SWITCH, IPFS_PROVIDER}`.
+- Actions (Bearer `ADMIN_TOKEN`): `POST /api/admin/artworks/:id/mint|hide|restore|retry-ipfs`, `POST /api/admin/reset {confirm:'ARCHIVE YYYY-MM-DD'}`, `POST /api/admin/clear-gallery`, `POST /api/admin/clear-mint-requests`, `PUT /api/admin/config {KILL_SWITCH, IPFS_PROVIDER}`.
 - Env: `VITE_API_URL`.
 
 ## 3. Outputs

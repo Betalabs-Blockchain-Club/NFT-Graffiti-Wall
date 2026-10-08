@@ -5,7 +5,7 @@ import type { ArtworkExport } from "../components/DrawingCanvas/DrawingCanvas";
 import { MintProgress } from "../components/MintProgress/MintProgress";
 import { useMintJob } from "../hooks/useMintJob";
 
-type ProgressLocationState = { artwork?: ArtworkExport; nickname?: string };
+type ProgressLocationState = { artwork?: ArtworkExport; nickname?: string; submissionId?: string };
 
 export function Progress() {
   const navigate = useNavigate();
@@ -13,7 +13,7 @@ export function Progress() {
   const state = location.state as ProgressLocationState | null;
   const artwork = state?.artwork;
   const nickname = state?.nickname;
-  const controller = useMintJob(artwork, nickname);
+  const controller = useMintJob(artwork, nickname, state?.submissionId);
   const { job } = controller;
 
   useEffect(() => {

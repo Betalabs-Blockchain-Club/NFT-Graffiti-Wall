@@ -4,6 +4,7 @@ import type { Storage } from "../services/storage.js";
 import type { createMintQueue } from "../services/queue.js";
 import { createUploadMiddleware } from "../middleware/validate.js";
 import { createRateLimit } from "../middleware/rateLimit.js";
+import { StorageError } from "../db/errors.js";
 
 type Queue = ReturnType<typeof createMintQueue>;
 
@@ -27,8 +28,29 @@ export function createArtworksRouter({ storage, queue, maxImageKb, rateLimitPerM
     try {
       const upload = req.upload;
       if (!upload) throw new Error("Upload validation did not produce an image");
+      const idempotencyKey = req.get("Idempotency-Key")?.trim();
+      if (idempotencyKey && idempotencyKey.length > 128) {
+        throw new StorageError("invalid-idempotency-key", "Idempotency key must be 128 characters or fewer", 400);
+      }
+      const replay = (existing: ReturnType<Storage["getByIdempotencyKey"]>) => {
+        if (!existing) return false;
+        if (existing.sha256 !== upload.sha256.toLowerCase() || existing.nickname !== upload.nickname) {
+          throw new StorageError("idempotency-conflict", "This submission key was already used for different artwork", 409);
+        }
+        const active = storage.getById(existing.id);
+        if (!active) throw new StorageError("submission-cleared", "This submission was already cleared by staff", 409);
+        res.status(202).json({ jobId: active.id, status: active.status });
+        return true;
+      };
+      if (idempotencyKey && replay(storage.getByIdempotencyKey(idempotencyKey))) return;
       const jobId = randomUUID();
-      storage.insertArtwork({ id: jobId, nickname: upload.nickname, sha256: upload.sha256 });
+      try {
+        storage.insertArtwork({ id: jobId, nickname: upload.nickname, sha256: upload.sha256, idempotencyKey });
+      } catch (error) {
+        if (idempotencyKey && (error as { code?: string }).code === "SQLITE_CONSTRAINT_UNIQUE"
+          && replay(storage.getByIdempotencyKey(idempotencyKey))) return;
+        throw error;
+      }
       queue.enqueue({ jobId, pngBytes: upload.bytes, nickname: upload.nickname, clientHash: upload.sha256 });
       res.status(202).json({ jobId, status: "pending" });
     } catch (error) {

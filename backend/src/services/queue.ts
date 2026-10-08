@@ -43,11 +43,13 @@ export function createMintQueue(options: QueueOptions) {
 	const mintTasks = new Map<string, Promise<MintJob>>();
 	const pending: string[] = [];
 	const running = new Set<string>();
+	const cancelled = new Set<string>();
 	const concurrency = Math.max(1, options.concurrency ?? 2);
 	const maxRetries = Math.max(0, options.maxRetries ?? 3);
 	const retryDelayMs = Math.max(0, options.retryDelayMs ?? 500);
 
 	const publish = (job: MintJob) => {
+		if (cancelled.has(job.jobId)) return;
 		jobs.set(job.jobId, { ...job });
 		options.realtime?.onJob?.({ ...job });
 	};
@@ -56,9 +58,11 @@ export function createMintQueue(options: QueueOptions) {
 	};
 
 	const prepare = async (input: MintInput, initialJob?: MintJob): Promise<void> => {
+		if (cancelled.has(input.jobId)) return;
 		const job = initialJob ?? { jobId: input.jobId, stage: "hashing" as const, retry: 0 };
 		try {
 			const bytesHash = await sha256(input.pngBytes);
+			if (cancelled.has(input.jobId)) return;
 			if (bytesHash !== input.clientHash.replace(/^0x/, "").toLowerCase()) {
 				throw new PermanentQueueError("client hash does not match uploaded bytes");
 			}
@@ -67,6 +71,7 @@ export function createMintQueue(options: QueueOptions) {
 			let metadataCID = job.metadataCID;
 			if (!imageCID || !metadataCID) {
 				imageCID = await options.ipfs.pinImage(input.pngBytes);
+				if (cancelled.has(input.jobId)) return;
 				metadataCID = await options.ipfs.pinMetadata({
 					name: `Blockchain Art ${input.jobId}`,
 					description: `Created by ${input.nickname}`,
@@ -77,12 +82,14 @@ export function createMintQueue(options: QueueOptions) {
 						{ trait_type: "Event", value: "TechFest 2026" }
 					]
 				});
+				if (cancelled.has(input.jobId)) return;
 				await options.storage?.setPinned?.(input.jobId, imageCID, metadataCID);
 			}
+			if (cancelled.has(input.jobId)) return;
 			prepared.set(input.jobId, { nickname: input.nickname, sha256: bytesHash, imageCID, metadataCID });
 			setStage(job, "ready", { imageCID, metadataCID, retry: job.retry ?? 0 });
 		} catch (error) {
-			publish({ ...job, stage: "failed", error: error instanceof Error ? error.message : String(error) });
+			if (!cancelled.has(input.jobId)) publish({ ...job, stage: "failed", error: error instanceof Error ? error.message : String(error) });
 		}
 	};
 
@@ -92,9 +99,11 @@ export function createMintQueue(options: QueueOptions) {
 		const task = (async () => {
 			const prior = baseJob ?? jobs.get(input.jobId) ?? { jobId: input.jobId, stage: "hashing" as const, retry: 0 };
 			for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+				if (cancelled.has(input.jobId)) return;
 				const current = { ...prior, stage: "hashing" as const, retry: attempt };
 				publish(current);
 				await prepare(input, current);
+				if (cancelled.has(input.jobId)) return;
 				if (jobs.get(input.jobId)?.stage !== "failed") return;
 				if (jobs.get(input.jobId)?.error?.includes("client hash does not match")) return;
 				if (attempt < maxRetries) await new Promise((resolve) => setTimeout(resolve, retryDelayMs * 2 ** attempt));
@@ -147,6 +156,18 @@ export function createMintQueue(options: QueueOptions) {
 			await prepareWithRetries(input, { jobId, stage: "hashing", retry: 0 });
 			return { ...jobs.get(jobId)! };
 		},
+		cancel(jobId: string): boolean {
+			const current = jobs.get(jobId);
+			if (current?.stage === "minting" || current?.stage === "confirmed") return false;
+			cancelled.add(jobId);
+			for (let index = pending.length - 1; index >= 0; index -= 1) {
+				if (pending[index] === jobId) pending.splice(index, 1);
+			}
+			jobs.delete(jobId);
+			inputs.delete(jobId);
+			prepared.delete(jobId);
+			return true;
+		},
 		async mint(jobId: string): Promise<MintJob> {
 			const existingTask = mintTasks.get(jobId);
 			if (existingTask) return existingTask;
@@ -182,6 +203,7 @@ export function createMintQueue(options: QueueOptions) {
 		close: () => {
 			pending.length = 0;
 			inputs.clear();
+			cancelled.clear();
 		}
 	};
 }

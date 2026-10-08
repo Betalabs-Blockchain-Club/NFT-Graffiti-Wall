@@ -14,7 +14,7 @@ Multipart form fields:
 | `nickname` | yes | 1–32 characters after trimming; blocked language is rejected. |
 | `clientHash` | yes | SHA-256 of the exact image bytes, exactly 64 hexadecimal characters, without a `0x` prefix. |
 
-Send `X-Device-Id` for per-device rate limiting. If absent, the backend uses the request IP. `RATE_LIMIT_PER_MIN` defaults to 5. The fixed-window limiter is process-local. Success body: `{ "jobId": "<uuid>", "status": "pending" }`.
+Send `X-Device-Id` for per-device rate limiting. If absent, the backend uses the request IP. `RATE_LIMIT_PER_MIN` defaults to 5. The fixed-window limiter is process-local. The kiosk also sends a stable `Idempotency-Key` for this submission; replaying the same key and payload returns the original job, while reusing it for different content returns `409`. Success body: `{ "jobId": "<uuid>", "status": "pending" }`.
 
 Common errors: `400` (`missing-image`, `invalid-upload`, `invalid-png`, `invalid-nickname`, `invalid-hash`, `hash-mismatch`), `413 oversize`, `429 rate-limit` (includes `Retry-After`), `503 kill-switch`.
 
@@ -40,6 +40,8 @@ JSON body: `{ "artworkId": string, "category": string, "voterKey": string }`. A 
 - `POST /api/admin/artworks/:jobId/hide` → `{ item: GalleryItem }`; changes it to `hidden` and emits gallery `hide` (`{ id }`).
 - `PUT /api/admin/config` → current config. JSON may include `KILL_SWITCH` (boolean) and/or `IPFS_PROVIDER` (`pinata | kubo`). Legacy `MODERATION_MODE` values remain accepted for existing deployments but no longer change the mint flow.
 - `POST /api/admin/reset` with `{ "confirm": "ARCHIVE YYYY-MM-DD" }` for **today's UTC date** → `{ ok, archiveId, artworkCount, voteCount }`. The route archives all current artwork and votes; wrong confirmation is rejected.
+- `POST /api/admin/clear-gallery` with `{ "confirm": "CLEAR GALLERY" }` → archives approved gallery artwork and its votes, then emits gallery `hide` events.
+- `POST /api/admin/clear-mint-requests` with `{ "confirm": "CLEAR MINT REQUESTS" }` → cancels and archives pending submissions. Requests already minting stay active; response includes `skippedMintingCount`.
 
 Unauthenticated admin requests return `401`. The kill switch blocks new artwork submissions; reads and the gallery remain available.
 

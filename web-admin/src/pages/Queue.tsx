@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, artworkImageUrl, getArtworkJob, hideArtwork, listQueue, mintArtwork, retryArtworkIpfs, restoreArtwork, type AdminJob } from "../lib/api";
+import { ApiError, artworkImageUrl, clearMintRequests, getArtworkJob, hideArtwork, listQueue, mintArtwork, retryArtworkIpfs, restoreArtwork, type AdminJob } from "../lib/api";
 import { AdminHeader, type AdminPage } from "../components/AdminHeader";
 import type { GalleryItem, QueueStatus } from "../types";
 
@@ -24,6 +24,7 @@ export function Queue({ token, onLock, onUnauthorized, onNavigate }: QueueProps)
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busyId, setBusyId] = useState("");
+  const [clearingRequests, setClearingRequests] = useState(false);
   const [jobs, setJobs] = useState<Record<string, AdminJob>>({});
 
   const refresh = useCallback(async () => {
@@ -89,13 +90,33 @@ export function Queue({ token, onLock, onUnauthorized, onNavigate }: QueueProps)
     } finally { setBusyId(""); }
   }
 
+  async function clearRequests() {
+    if (!window.confirm("Clear all pending mint requests? Requests already minting will be kept.")) return;
+    setClearingRequests(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await clearMintRequests(token);
+      setItems([]);
+      setJobs({});
+      setNotice(`${result.artworkCount} mint request${result.artworkCount === 1 ? "" : "s"} cleared.${result.skippedMintingCount ? ` ${result.skippedMintingCount} in-progress mint${result.skippedMintingCount === 1 ? " was" : "s were"} kept.` : ""}`);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "Could not clear mint requests.";
+      if (cause instanceof ApiError && cause.status === 401) onUnauthorized(message);
+      else setError(message);
+    } finally { setClearingRequests(false); }
+  }
+
   return (
     <main className="admin-shell">
       <AdminHeader page="queue" onNavigate={onNavigate} onLock={onLock} />
 
       <section className="queue-heading" id="top">
         <div><p className="eyebrow">WALL CONTROL</p><h1>Artwork queue</h1><p className="muted">Mint prepared submissions to publish them on the public wall.</p></div>
-        <button className="button button-outline" onClick={() => void refresh()} disabled={loading}>↻ <span>Refresh</span></button>
+        <div className="queue-heading-actions">
+          {status === "pending" && <button className="button button-danger" onClick={() => void clearRequests()} disabled={loading || clearingRequests || Boolean(busyId)}>{clearingRequests ? "Clearing…" : "Clear mint requests"}</button>}
+          <button className="button button-outline" onClick={() => void refresh()} disabled={loading || clearingRequests}>↻ <span>Refresh</span></button>
+        </div>
       </section>
 
       <nav className="queue-tabs" aria-label="Queue status">

@@ -76,5 +76,35 @@ export function createAdminRouter({ storage, queue, adminToken, hooks }: AdminOp
     if (notified.some((result) => result.status === "rejected")) throw new Error("Archive notification failed");
     res.json({ ok: true, ...archive });
   }));
+  router.post("/api/admin/clear-gallery", route(async (req, res) => {
+    if (req.body?.confirm !== "CLEAR GALLERY") {
+      throw new StorageError("invalid-confirmation", "Explicit gallery clear confirmation is required");
+    }
+    const archive = storage.archiveByStatus("approved");
+    const notified = await Promise.allSettled(archive.ids.map((id) => Promise.resolve().then(() => hooks.onHidden(id))));
+    if (notified.some((result) => result.status === "rejected")) throw new Error("Gallery clear notification failed");
+    res.json({ ok: true, archiveId: archive.archiveId, artworkCount: archive.artworkCount, voteCount: archive.voteCount });
+  }));
+  router.post("/api/admin/clear-mint-requests", route((req, res) => {
+    if (req.body?.confirm !== "CLEAR MINT REQUESTS") {
+      throw new StorageError("invalid-confirmation", "Explicit mint request clear confirmation is required");
+    }
+    const requestIds: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = storage.list({ status: "pending", limit: 100, cursor });
+      requestIds.push(...page.items.map((item) => item.id));
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+
+    const excludedIds: string[] = [];
+    for (const id of requestIds) {
+      const job = queue.getStatus(id);
+      if (job?.stage === "minting" || !queue.cancel(id)) excludedIds.push(id);
+    }
+    const archive = storage.archiveByStatus("pending", excludedIds);
+    res.json({ ok: true, skippedMintingCount: excludedIds.length, archiveId: archive.archiveId,
+      artworkCount: archive.artworkCount, voteCount: archive.voteCount });
+  }));
   return router;
 }
