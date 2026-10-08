@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, artworkImageUrl, listQueue, moderate } from "../lib/api";
+import { AdminHeader, type AdminPage } from "../components/AdminHeader";
 import type { GalleryItem, QueueStatus } from "../types";
 
 const tabs: Array<{ id: QueueStatus; label: string }> = [
@@ -12,9 +13,10 @@ interface QueueProps {
   token: string;
   onLock: () => void;
   onUnauthorized: (message: string) => void;
+  onNavigate: (page: AdminPage) => void;
 }
 
-export function Queue({ token, onLock, onUnauthorized }: QueueProps) {
+export function Queue({ token, onLock, onUnauthorized, onNavigate }: QueueProps) {
   const [status, setStatus] = useState<QueueStatus>("pending");
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,10 +56,7 @@ export function Queue({ token, onLock, onUnauthorized }: QueueProps) {
 
   return (
     <main className="admin-shell">
-      <header className="topbar">
-        <a className="brand" href="#top" aria-label="Graffiti Wall moderation home"><span className="brand-mark">GW</span><span>Graffiti Wall <small>MODERATION</small></span></a>
-        <div className="topbar-actions"><span className="session-label"><span className="live-dot" /> Admin session</span><button className="button button-quiet" onClick={onLock}>Lock session</button></div>
-      </header>
+      <AdminHeader page="queue" onNavigate={onNavigate} onLock={onLock} />
 
       <section className="queue-heading" id="top">
         <div><p className="eyebrow">WALL CONTROL</p><h1>Artwork queue</h1><p className="muted">Review each submission before it appears on the public wall.</p></div>

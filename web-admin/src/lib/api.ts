@@ -9,10 +9,24 @@ export class ApiError extends Error {
   }
 }
 
+export interface HealthSummary {
+  ok: boolean;
+  chain: boolean;
+  ipfs: boolean;
+  queueDepth: number | false;
+  balanceEth: number | false;
+}
+
+export interface AdminConfig {
+  MODERATION_MODE: "display_after_approve" | "mint_after_approve";
+  KILL_SWITCH: boolean;
+  IPFS_PROVIDER: "pinata" | "kubo";
+}
+
 async function request<T>(path: string, token: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${apiBase}${path}`, {
     ...init,
-    headers: { ...init.headers, Authorization: `Bearer ${token}` }
+    headers: { "Content-Type": "application/json", ...init.headers, Authorization: `Bearer ${token}` }
   });
   let body: unknown;
   try { body = await response.json(); } catch { body = undefined; }
@@ -23,6 +37,30 @@ async function request<T>(path: string, token: string, init: RequestInit = {}): 
     throw new ApiError(detail, response.status);
   }
   return body as T;
+}
+
+export function getHealth(token: string): Promise<HealthSummary> {
+  return request<HealthSummary>("/api/health", token);
+}
+
+export function getAdminConfig(token: string): Promise<AdminConfig> {
+  // The backend returns its complete config after any PUT; an empty patch reads it without changing settings.
+  return updateAdminConfig({}, token);
+}
+
+export function updateAdminConfig(patch: Partial<AdminConfig>, token: string): Promise<AdminConfig> {
+  return request<AdminConfig>("/api/admin/config", token, { method: "PUT", body: JSON.stringify(patch) });
+}
+
+export interface ArchiveResult {
+  ok: boolean;
+  archiveId: string;
+  artworkCount: number;
+  voteCount: number;
+}
+
+export function archiveWall(confirm: string, token: string): Promise<ArchiveResult> {
+  return request<ArchiveResult>("/api/admin/reset", token, { method: "POST", body: JSON.stringify({ confirm }) });
 }
 
 export async function listQueue(status: QueueStatus, token: string): Promise<GalleryItem[]> {
