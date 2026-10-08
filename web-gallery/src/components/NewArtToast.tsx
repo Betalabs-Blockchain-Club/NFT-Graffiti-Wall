@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import { GalleryItem } from "../types";
 import { Sparkles, Hash, User } from "lucide-react";
-import { IPFS_GATEWAY } from "../hooks/useGallerySocket";
+import { artworkImageUrl } from "../hooks/useGallerySocket";
 
 interface NewArtToastProps {
   item: GalleryItem | null;
@@ -52,9 +52,7 @@ export const NewArtToast: React.FC<NewArtToastProps> = ({ item, onDismiss }) => 
     }
   }, [item, onDismiss]);
 
-  const imageUrl = item
-    ? item.imageUrl || `${IPFS_GATEWAY}/${item.imageCID}`
-    : "";
+  const imageUrl = item ? artworkImageUrl(item) : "";
 
   return (
     <AnimatePresence>

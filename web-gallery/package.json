@@ -10,6 +10,7 @@
     "mock": "node mock/server.mjs"
   },
   "dependencies": {
+    "@graffiti/shared": "^0.1.0",
     "canvas-confetti": "^1.9.3",
     "framer-motion": "^11.2.10",
     "lucide-react": "^0.383.0",

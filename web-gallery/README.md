@@ -26,7 +26,7 @@ npm run preview
 ```
 
 ## Environment Variables
-- `VITE_API_URL`: Backend REST URL (default: `http://localhost:3000`)
+- `VITE_API_URL`: Backend REST URL (default: `http://localhost:3001`)
 - `VITE_WS_URL`: Backend Socket.IO URL (default: same as `VITE_API_URL`)
 - `VITE_IPFS_GATEWAY`: IPFS gateway base URL (default: `https://ipfs.io/ipfs`)
 - `VITE_VERIFY_URL`: Public verify site base URL (default: current host)
