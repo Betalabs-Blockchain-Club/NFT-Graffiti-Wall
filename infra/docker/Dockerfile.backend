@@ -21,6 +21,7 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app/backend/dist ./dist
+COPY backend/src/db/schema.sql ./dist/backend/src/db/schema.sql
 COPY package.json package-lock.json ./
 
 RUN mkdir -p data && chown -R appuser:appgroup /app

@@ -29,8 +29,8 @@ export function createArtworksRouter({ storage, queue, maxImageKb, rateLimitPerM
       if (!upload) throw new Error("Upload validation did not produce an image");
       const jobId = randomUUID();
       storage.insertArtwork({ id: jobId, nickname: upload.nickname, sha256: upload.sha256 });
-      const job = queue.enqueue({ jobId, pngBytes: upload.bytes, nickname: upload.nickname, clientHash: upload.sha256 });
-      res.status(202).json({ jobId, status: job.stage });
+      queue.enqueue({ jobId, pngBytes: upload.bytes, nickname: upload.nickname, clientHash: upload.sha256 });
+      res.status(202).json({ jobId, status: "pending" });
     } catch (error) {
       next(error);
     }

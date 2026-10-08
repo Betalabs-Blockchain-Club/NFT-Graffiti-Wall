@@ -1,20 +1,5 @@
-export type ArtworkStatus = "pending" | "minted" | "approved" | "hidden";
+import type { LeaderboardEntry } from "@graffiti/shared/api-client";
+import type { GalleryItem as ApiGalleryItem } from "@graffiti/shared/types";
 
-export interface GalleryItem {
-  id: string; // artwork / job id
-  tokenId?: number;
-  nickname: string;
-  imageCID: string;
-  imageUrl: string;
-  sha256: string;
-  status: ArtworkStatus;
-  createdAt: string;
-  votes?: number;
-}
-
-export interface LeaderboardEntry {
-  artworkId: string;
-  tokenId?: number;
-  nickname?: string;
-  votes: number;
-}
+export type GalleryItem = ApiGalleryItem & { votes?: number };
+export type { LeaderboardEntry };
