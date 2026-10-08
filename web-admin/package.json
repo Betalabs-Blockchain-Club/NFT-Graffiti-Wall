@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "mock": "node mock/server.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
