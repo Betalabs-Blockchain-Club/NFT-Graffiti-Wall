@@ -408,12 +408,14 @@ VITE_CONTRACT_ADDRESS=            # fill after Amoy deployment
 VITE_CHAIN_ID=80002
 VITE_EXPLORER_URL=https://amoy.polygonscan.com/
 VITE_WS_URL=http://localhost:3001
-VITE_VERIFY_URL=https://verify.example.com
+VITE_VERIFY_URL=https://<deployed-public-verifier-domain>
 VITE_CONTRACT_ADDRESS=0x...
 VITE_RPC_URL=https://...
 ```
 
 For testnet use, fund the minter wallet before the event and configure the real deployed address, RPC, and IPFS credentials. The admin API exposes the current balance through `/api/health`; there is no admin panel UI yet.
+
+Set `VITE_VERIFY_URL` in the kiosk build environment to the deployed public HTTPS verifier origin. The kiosk will not generate a QR from a localhost URL; downloads are available on the phone-facing verifier after a ticket passes verification.
 
 ---
 

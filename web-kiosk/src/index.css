@@ -133,12 +133,8 @@ h1 span { display: block; color: #d7ff4f; }
 .certificate-data dd { overflow: hidden; margin: 0; color: #101313; text-overflow: ellipsis; white-space: nowrap; }
 .certificate-qr { display: grid; justify-items: center; gap: 10px; color: #435249; font: 11px "DM Mono", monospace; text-transform: uppercase; }
 .certificate-qr span { display: inline-flex; align-items: center; gap: 5px; }
-.certificate-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 32px; }
-.secondary-action { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 56px; padding: 0 20px; color: #dfe8df; border: 1px solid #53645a; border-radius: 8px; background: #17201d; text-decoration: none; }
-.secondary-action:hover { border-color: #d7ff4f; color: #d7ff4f; }
-
 @media print {
-  .flow-header, .certificate-actions { display: none !important; }
+  .flow-header { display: none !important; }
   .certificate-screen { padding: 0; background: #fff; }
   .certificate-card { box-shadow: none; border: 0; }
 }
@@ -176,6 +172,4 @@ h1 span { display: block; color: #d7ff4f; }
   .certificate-card { grid-template-columns: 1fr; gap: 24px; padding: 20px; }
   .certificate-artwork { width: min(72vw, 360px); margin: 0 auto; }
   .certificate-qr { justify-items: start; }
-  .certificate-actions { align-items: stretch; flex-direction: column; }
-  .certificate-actions > * { width: 100%; }
 }

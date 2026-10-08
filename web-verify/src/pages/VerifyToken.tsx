@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { VerifyBadge } from "../components/VerifyBadge";
+import { VerifiedDownloads } from "../components/VerifiedDownloads";
 import { TamperCanvas } from "../components/TamperCanvas";
 import { type VerificationResult, type VerificationStage, VerificationError, parseGateways, verifyToken } from "../lib/verify";
 const stageMessages: Record<VerificationStage, string> = { chain: "Reading the original fingerprint from the blockchain…", image: "Loading the original artwork from IPFS…", hash: "Recomputing the artwork fingerprint in your browser…" };
@@ -19,5 +20,5 @@ export function VerifyToken() {
   }, [config, tokenId]);
   if (error) return <main className="page"><section className="error-card"><p className="eyebrow">{error.kind === "not-found" ? "NOT FOUND" : "VERIFICATION UNAVAILABLE"}</p><h1>{error.message}</h1><p>Check the QR code or try again when the chain and IPFS gateway are reachable.</p></section></main>;
   if (!result) return <main className="page"><section className="loading-card"><span className="spinner" aria-hidden="true" /><h1>Checking token #{tokenId || "…"}</h1><p>{stageMessages[stage]}</p></section></main>;
-  return <main className="page"><div className="artwork"><img src={result.imageUrl} alt={`Artwork by ${result.nickname || "anonymous artist"}`} /></div><VerifyBadge result={result} />{result.verified && <TamperCanvas imageUrl={result.imageUrl} imageBytes={result.imageBytes} originalHash={result.onChainHash} />}</main>;
+  return <main className="page"><div className="artwork"><img src={result.imageUrl} alt={`Artwork by ${result.nickname || "anonymous artist"}`} /></div><VerifyBadge result={result} />{result.verified && <><VerifiedDownloads result={result} /><TamperCanvas imageUrl={result.imageUrl} imageBytes={result.imageBytes} originalHash={result.onChainHash} /></>}</main>;
 }

@@ -20,7 +20,7 @@ The visitor-facing mint terminal. Turns 60 seconds of drawing into a QR certific
 2. `pages/Nickname.tsx` — single field, client filter, no PII.
 3. `hooks/useMintJob.ts` — POST art, poll/subscribe status, expose `{stage, progress, error, retry}`.
 4. `components/MintProgress.tsx` — 4-step animation with real hash/CID/tx values.
-5. `components/CertificateCard.tsx` — artwork + tokenId + date + QR (`shared/qr` → `${VITE_VERIFY_URL}/#/token/{id}`) + download/share.
+5. `components/CertificateCard.tsx` — artwork + tokenId + date + QR (`shared/qr` → `${VITE_VERIFY_URL}/#/token/{id}`). Downloads happen on the phone-facing verifier only.
 6. Never store minter keys; size-check ≤500KB before upload; rate-limit UX (disable double-submit).
 
 ## 5. Interfaces
