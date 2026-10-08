@@ -11,7 +11,7 @@ function runtimeConfig() {
 export function VerifyToken() {
   const { tokenId = "" } = useParams(); const [stage, setStage] = useState<VerificationStage>("chain");
   const [result, setResult] = useState<VerificationResult>(); const [error, setError] = useState<VerificationError>(); const config = useMemo(runtimeConfig, []);
-  useEffect(() => { let active = true; setResult(undefined); setError(undefined);
+  useEffect(() => { let active = true; setStage("chain"); setResult(undefined); setError(undefined);
     verifyToken(tokenId, config, (nextStage) => active && setStage(nextStage)).then((nextResult) => active && setResult(nextResult)).catch((cause: unknown) => {
       if (active) setError(cause instanceof VerificationError ? cause : new VerificationError("chain", "Verification could not be completed."));
     }); return () => { active = false; };

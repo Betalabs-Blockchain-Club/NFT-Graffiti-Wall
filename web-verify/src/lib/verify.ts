@@ -13,10 +13,22 @@ export class VerificationError extends Error {
   }
 }
 export function parseGateways(value: string | undefined): string[] {
-  return (value ?? "").split(",").map((gateway) => gateway.trim().replace(/\/+$/, "")).filter(Boolean);
+  return [...new Set((value ?? "").split(",").map((gateway) => gateway.trim().replace(/\/+$/, "")).filter(Boolean))];
 }
 export function buildGatewayUrls(cid: string, gateways: string[]): string[] {
-  return gateways.map((gateway) => `${gateway.replace(/\/+$/, "")}/${encodeURIComponent(cid)}`);
+  if (!cid.trim() || cid.includes("/") || cid.includes("\\")) {
+    throw new VerificationError("configuration", "The contract returned an invalid IPFS content ID.");
+  }
+  const urls: string[] = [];
+  for (const gateway of gateways) {
+    try {
+      const base = new URL(gateway);
+      if (!["https:", "http:"].includes(base.protocol) || base.username || base.password) continue;
+      urls.push(base.toString().replace(/\/+$/, "") + "/" + encodeURIComponent(cid));
+    } catch { /* Skip malformed gateways and continue with configured fallbacks. */ }
+  }
+  if (!urls.length) throw new VerificationError("configuration", "No valid IPFS gateway is configured.");
+  return urls;
 }
 export async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
@@ -39,24 +51,38 @@ export async function fetchImageWithFallback(cid: string, gateways: string[], fe
 }
 export async function verifyToken(tokenIdText: string, config: VerifyConfig, onStage?: (stage: VerificationStage) => void): Promise<VerificationResult> {
   if (!/^\d+$/.test(tokenIdText)) throw new VerificationError("not-found", "Token ID must be a positive whole number.");
-  if (!config.rpcUrl || !isAddress(config.contractAddress)) throw new VerificationError("configuration", "The verification site is missing a valid RPC URL or contract address.");
+  if (!config.rpcUrl || !isAddress(config.contractAddress)
+    || (config.chainId !== undefined && !/^\d+$/.test(config.chainId))) {
+    throw new VerificationError("configuration", "The verification site is missing a valid RPC URL, contract address, or chain ID.");
+  }
   const tokenId = BigInt(tokenIdText);
+  if (tokenId < 1n || tokenId > (1n << 256n) - 1n) {
+    throw new VerificationError("not-found", "Token ID must be a positive whole number.");
+  }
   onStage?.("chain");
   let artwork: { creator: string; nickname: string; ipfsCID: string; artworkHash: string; timestamp: bigint };
+  let contract: Contract;
   try {
     const provider = new JsonRpcProvider(config.rpcUrl);
     if (config.chainId && (await provider.getNetwork()).chainId !== BigInt(config.chainId)) {
       throw new VerificationError("chain", "The configured RPC endpoint is connected to the wrong chain.");
     }
-    const contract = new Contract(config.contractAddress, graffitiWallAbi, provider);
+    contract = new Contract(config.contractAddress, graffitiWallAbi, provider);
     artwork = await contract.artworks(tokenId);
-  } catch { throw new VerificationError("chain", "The artwork could not be read from the configured blockchain."); }
+  } catch (error) {
+    if (error instanceof VerificationError) throw error;
+    throw new VerificationError("chain", "The artwork could not be read from the configured blockchain.");
+  }
   if (!artwork.ipfsCID || artwork.artworkHash === ZeroHash) throw new VerificationError("not-found", `Token #${tokenId} was not found on this Graffiti Wall contract.`);
   onStage?.("image");
   const { bytes, imageUrl } = await fetchImageWithFallback(artwork.ipfsCID, config.ipfsGateways);
   onStage?.("hash");
   const recomputedHash = `0x${await sha256Hex(bytes)}`;
+  let contractVerified: boolean;
+  try { contractVerified = await contract.verify(tokenId, recomputedHash); }
+  catch { throw new VerificationError("chain", "The on-chain verification call failed."); }
   const explorerUrl = config.explorerUrl ? `${config.explorerUrl.replace(/\/+$/, "")}/address/${config.contractAddress}` : undefined;
   return { tokenId, nickname: artwork.nickname, ipfsCID: artwork.ipfsCID, timestamp: artwork.timestamp, creator: artwork.creator,
-    onChainHash: artwork.artworkHash, recomputedHash, verified: recomputedHash.toLowerCase() === artwork.artworkHash.toLowerCase(), imageUrl, explorerUrl };
+    onChainHash: artwork.artworkHash, recomputedHash,
+    verified: contractVerified && recomputedHash.toLowerCase() === artwork.artworkHash.toLowerCase(), imageUrl, explorerUrl };
 }
