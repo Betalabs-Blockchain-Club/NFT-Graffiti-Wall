@@ -16,3 +16,10 @@
 The local chain → backend → IPFS → moderation API → public gallery API flow passed. The root `.env` is absent, so the test used temporary local Hardhat/Kubo settings and a temporary SQLite DB. `web-admin/` currently contains only its package manifest and instructions, so its UI could not be run; no browser-mediated full loop is claimed.
 
 Complete A1/A2 to run the browser-admin portion, then exercise the flow through kiosk and gallery browsers. For a persistent setup, add valid local settings to the ignored root `.env` and deploy the contract again after restarting Hardhat.
+
+## 2026-10-08 — I2 Base Sepolia preflight
+
+- I2 cannot start from this checkout: there is no root `.env`, no `contracts/deployments/base-sepolia.json`, and no public verify-site URL to place in the kiosk configuration. No credential values were requested in chat or added to the repository.
+- The V3 static-host deliverables are also absent: `web-verify/README.md` and a deployed site are not present. The current verify app has no tamper page/control, so the requested phone tamper check cannot be completed yet.
+- No Base Sepolia transaction, Pinata upload, public URL check, or cellular phone scan was run. The local Hardhat/Kubo result above does not count as I2 evidence.
+- To resume: provide local testnet settings in the ignored `.env` (funded minter key, RPC URL, deployed contract address, Pinata JWT, and public verify URL); complete/deploy V3 with the same public RPC and contract address; then run E1 and scan the resulting QR on a phone using cellular data, including the tamper flow. Keep secrets out of this log.
