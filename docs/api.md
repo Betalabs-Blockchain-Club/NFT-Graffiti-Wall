@@ -1,32 +1,57 @@
-# API Reference (mirrors `backend/src/routes/`)
+# API Reference
 
-Base: `VITE_API_URL` (dev `http://localhost:3001`).
+The production API is the Express app in `backend/src/`. Base URL for local development: `http://localhost:3001`. JSON errors use `{ "code": string, "message": string }` unless noted. Server failures return a generic `internal-error`; provider details and secrets are not returned.
 
-## POST /api/artworks → 202 {jobId, status:'pending'}
-Multipart: `image` (PNG ≤500KB), `nickname` (1–32), `clientHash` (hex64). Header `X-Device-Id`.
-Errors: 400 hash-mismatch/oversize, 429 rate-limit, 503 kill-switch.
+## Artwork submission and status
 
-## GET /api/artworks/:jobId/status → MintJob
-`{jobId, stage: hashing|uploading|minting|confirmed|failed, tokenId?, txHash?, imageCID?, error?}`
+### `POST /api/artworks` → `202`
 
-## GET /api/gallery?status=approved&limit=48&cursor= → {items: GalleryItem[], nextCursor}
-`approved` is public and requires no auth. Any other `status` requires `Authorization: Bearer <ADMIN_TOKEN>`.
+Multipart form fields:
 
-## POST /api/votes {artworkId, category, voterKey} → 201
-Dedupe `(artworkId, category, voterKey)` → 409 on double-vote.
+| Field | Required | Rules |
+|---|---|---|
+| `image` | yes | One PNG file, valid PNG signature, at most `MAX_IMAGE_KB` (default 500 KB). Bytes are hashed and pinned unchanged. |
+| `nickname` | yes | 1–32 characters after trimming; blocked language is rejected. |
+| `clientHash` | yes | SHA-256 of the exact image bytes, exactly 64 hexadecimal characters, without a `0x` prefix. |
 
-## Admin (Bearer ADMIN_TOKEN)
-- POST /api/admin/artworks/:id/approve|hide
-- PUT /api/admin/config {MODERATION_MODE, KILL_SWITCH, IPFS_PROVIDER}
-- POST /api/admin/reset {confirm: "ARCHIVE YYYY-MM-DD"}
-- GET /api/health → {ok, chain, ipfs, queueDepth, balanceEth}
+Send `X-Device-Id` for per-device rate limiting. If absent, the backend uses the request IP. `RATE_LIMIT_PER_MIN` defaults to 5. The fixed-window limiter is process-local. Success body: `{ "jobId": "<uuid>", "status": "pending" }`.
 
-## Socket.IO realtime
-Connect to the Socket.IO server and use these namespaces:
+Common errors: `400` (`missing-image`, `invalid-upload`, `invalid-png`, `invalid-nickname`, `invalid-hash`, `hash-mismatch`), `413 oversize`, `429 rate-limit` (includes `Retry-After`), `503 kill-switch`.
 
-- `/gallery`: server emits `new` with a `GalleryItem`; server emits `hide` with `{id}`.
-- `/status`: client emits `subscribe` with `jobId`; server emits `job` with a `MintJob`.
+### `GET /api/artworks/:jobId/status` → `200 MintJob`
 
-Clients may poll `GET /api/artworks/:jobId/status` as a fallback.
+Returns `{ jobId, stage, tokenId?, txHash?, imageCID?, metadataCID?, retry?, error? }`. `stage` is `hashing | uploading | minting | confirmed | failed`; `retry` is the current retry index (starts at 0). Treat `error` as diagnostic and show visitors a friendly message. Job progress is in memory: an unknown ID returns `404 not_found`; after a restart, a persisted artwork may instead return `404` with a message that status is unavailable.
 
-`GalleryItem` is `{id, tokenId?, nickname, imageCID, imageUrl, sha256, status, createdAt}` where `status` is `pending | minted | approved | hidden`.
+## Gallery and voting
+
+### `GET /api/gallery?status=approved&limit=48&cursor=...` → `200`
+
+Returns `{ items: GalleryItem[], nextCursor: string | null }`. `status` defaults to `approved`; that public view requires no token. Other supported statuses (`pending`, `minted`, `hidden`) require `Authorization: Bearer <ADMIN_TOKEN>`. `limit` is a positive integer up to the storage layer's maximum (100); `cursor` is an opaque pagination cursor. `GalleryItem` contains `id`, optional `tokenId`, `nickname`, `imageCID`, `imageUrl` (`ipfs://<CID>`), `sha256` (hex without `0x`), `status`, and `createdAt`.
+
+### `POST /api/votes` → `201 { "ok": true }`
+
+JSON body: `{ "artworkId": string, "category": string, "voterKey": string }`. A duplicate `(artworkId, category, voterKey)` returns `409`; an unknown or non-approved artwork returns `404`. `GET /api/leaderboard` returns the stored aggregate. Vote submissions are not currently rate-limited by the backend.
+
+## Admin (Bearer `ADMIN_TOKEN`)
+
+- `POST /api/admin/artworks/:jobId/approve` → `{ item: GalleryItem }`; changes the artwork to `approved` and emits gallery `new`.
+- `POST /api/admin/artworks/:jobId/hide` → `{ item: GalleryItem }`; changes it to `hidden` and emits gallery `hide` (`{ id }`).
+- `PUT /api/admin/config` → current config. JSON may include `MODERATION_MODE` (`display_after_approve | mint_after_approve`), `KILL_SWITCH` (boolean), and/or `IPFS_PROVIDER` (`pinata | kubo`). The current backend bootstrap always runs queue processing as `display_after_approve`; setting `mint_after_approve` is stored but does not change the mint flow yet.
+- `POST /api/admin/reset` with `{ "confirm": "ARCHIVE YYYY-MM-DD" }` for **today's UTC date** → `{ ok, archiveId, artworkCount, voteCount }`. The route archives all current artwork and votes; wrong confirmation is rejected.
+
+Unauthenticated admin requests return `401`. The kill switch blocks new artwork submissions; reads and the gallery remain available.
+
+## Health
+
+### `GET /api/health` → `200`
+
+Returns `{ ok, chain, ipfs, queueDepth, balanceEth }`. `ok` is true only when chain and IPFS checks succeed and queue/balance values are valid. Individual failed checks are `false`; health remains `200` and does not expose provider errors or credentials.
+
+## Socket.IO
+
+Connect to the backend origin using Socket.IO:
+
+- Namespace `/gallery`: server emits `new` with an approved `GalleryItem`; emits `hide` with `{ id }`.
+- Namespace `/status`: client emits `subscribe` with a `jobId`; server emits `job` with that job's `MintJob` updates.
+
+Subscriptions are not authorization and updates are not replayed to late subscribers. Reconnect, subscribe again, and poll `GET /api/artworks/:jobId/status` to recover current state. Browser origins are controlled by `CORS_ORIGIN`.
