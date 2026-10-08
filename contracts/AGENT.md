@@ -20,7 +20,7 @@ Own the **sole source of on-chain truth**: the ERC-721 that stores the fingerpri
 2. Enforce: only-minter mint, non-empty CID/hash/URI, nickname length guard.
 3. Provide `verify()` view + `supportsInterface` override.
 4. Tests: role gating (non-minter reverts), id increment, verify true/false, event emission, tokenURI set.
-5. Deploy scripts for `localhost` + testnet (Base Sepolia default), verify on explorer, export address.
+5. Deploy scripts for `localhost` + Polygon Amoy (chain ID 80002), verify on explorer, export address.
 6. Publish ABI to `shared/src/types` consumers (copy or npm link, never hand-edit in two places).
 
 ## 5. Interfaces
@@ -46,7 +46,7 @@ contracts/
 ## 8. Definition of Done
 - [ ] `npx hardhat test` green (5+ cases above).
 - [ ] Deploy to localhost + one testnet, `verify()` round-trips from JS.
-- [ ] `deployments/base-sepolia.json` committed with address + block.
+- [ ] `deployments/polygon-amoy.json` committed with real address + block after deployment.
 - [ ] Gas per mint noted in `docs/contract.md` (budget ~200 mints).
 
 ## 9. Non-goals

@@ -3,7 +3,7 @@
 - Contract: `contracts/contracts/GraffitiWall.sol` — ERC721 ("Blockchain Graffiti Wall", "GRAFFITI").
 - Deploys: record in `contracts/deployments/<network>.json` = `{address, block, abi}`. The ABI there is read straight off the compiled artifact (`hre.artifacts.readArtifact`), so it's always in sync with the `.sol` — never hand-edit it.
 - Single-source-of-truth ABI also exported to `contracts/abi/GraffitiWall.json` for consumers (backend `services/chain.ts`, frontends) that just want the ABI without the rest of the deployment record.
-- Networks: `base-sepolia` (default) | `sepolia` | `localhost`.
+- Networks: `polygon-amoy` (default, chain ID 80002) | `sepolia` | `localhost`.
 - After deploy: set `CONTRACT_ADDRESS` (backend) + `VITE_CONTRACT_ADDRESS` (all web-*).
 
 ## Scripts (`contracts/scripts/`)
@@ -22,21 +22,21 @@ npx hardhat run scripts/verify-roundtrip.ts --network localhost
 
 The local `verify-roundtrip.ts` check mints one token and confirms a correct hash returns `true` while a tampered hash returns `false`. The tracked `deployments/localhost.json` address is for the default Hardhat node only; the node resets on restart, so deploy again before using it. Gas for `mint()` on a fresh token: **~249,304 gas** (measured on localhost Hardhat EVM; re-measure on a testnet because EVM configuration can change gas use).
 
-## base-sepolia — not yet deployed
+## Polygon Amoy — not yet deployed
 
-This checkout has no `deployments/base-sepolia.json` and no testnet contract address. A Base Sepolia deployment needs a funded deployer/minter wallet. The backend also needs an IPFS provider credential if using Pinata; that credential is not needed to deploy the contract.
+This checkout has no `deployments/polygon-amoy.json` and no Amoy contract address. An Amoy deployment needs a deployer/minter wallet funded with POL. The backend also needs an IPFS provider credential if using Pinata; that credential is not needed to deploy the contract.
 
-1. Run `npx hardhat run scripts/create-wallets.ts` to generate a minter + spare keypair, then fund the deployer/minter from a Base Sepolia faucet (for example, Alchemy's Base Sepolia faucet). Keep the spare key offline.
-2. Configure the network RPC and funded `MINTER_PRIVATE_KEY` in the local `.env`.
+1. Run `npx hardhat run scripts/create-wallets.ts` to generate a minter + spare keypair, then fund the deployer/minter from a Polygon Amoy faucet. Keep the spare key offline.
+2. Configure `CHAIN_NETWORK=polygon-amoy`, `RPC_URL=https://rpc-amoy.polygon.technology/`, and the funded `MINTER_PRIVATE_KEY` in the local `.env`.
 
 Once `MINTER_PRIVATE_KEY` in `.env` is funded:
 
 ```
-npx hardhat run scripts/deploy.ts --network base-sepolia
-npx hardhat run scripts/verify-roundtrip.ts --network base-sepolia
-npx hardhat verify --network base-sepolia <address>
+npx hardhat run scripts/deploy.ts --network polygon-amoy
+npx hardhat run scripts/verify-roundtrip.ts --network polygon-amoy
+npx hardhat verify --network polygon-amoy <address>
 ```
 
-After a successful deploy and round-trip, record the real address, block, ABI, and explorer link here; commit `deployments/base-sepolia.json`.
+After a successful deploy and round-trip, record the real address, block, ABI, and explorer link here; commit `deployments/polygon-amoy.json`.
 
-**Explorer verify:** `npx hardhat verify --network base-sepolia <address>`
+**Explorer verify:** `POLYGONSCAN_API_KEY=<your key> npx hardhat verify --network polygon-amoy <address>`

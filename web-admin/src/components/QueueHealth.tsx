@@ -18,13 +18,13 @@ export function QueueHealth({ health, loading, error, onRefresh }: QueueHealthPr
         <div><p className="eyebrow">LIVE SYSTEM STATUS</p><h2 id="health-title">Wall health</h2></div>
         <button className="button button-outline" onClick={onRefresh} disabled={loading}>↻ <span>Refresh</span></button>
       </div>
-      {lowBalance && <div className="balance-alert" role="alert"><span className="alert-symbol">!</span><div><strong>Low wallet balance</strong><p>Minting may fail until the wallet is funded.</p></div><b>{balance.toFixed(4)} ETH</b></div>}
+      {lowBalance && <div className="balance-alert" role="alert"><span className="alert-symbol">!</span><div><strong>Low wallet balance</strong><p>Minting may fail until the wallet is funded.</p></div><b>{balance.toFixed(4)} POL</b></div>}
       {error && <p className="notice notice-error" role="alert">Health check failed: {error}</p>}
       <div className="health-grid">
         <HealthCard title="Chain RPC" state={health ? (health.chain ? "online" : "offline") : "unknown"} label={health ? (health.chain ? "Connected" : "Unavailable") : "—"} />
         <HealthCard title="IPFS storage" state={health ? (health.ipfs ? "online" : "offline") : "unknown"} label={health ? (health.ipfs ? "Connected" : "Unavailable") : "—"} />
         <HealthCard title="Queue depth" state="neutral" label={health && health.queueDepth !== false ? String(health.queueDepth) : "Unavailable"} />
-        <HealthCard title="Wallet balance" state={lowBalance ? "offline" : hasBalance ? "online" : "unknown"} label={hasBalance ? `${balance.toFixed(4)} ETH` : "Unavailable"} />
+        <HealthCard title="Wallet balance" state={lowBalance ? "offline" : hasBalance ? "online" : "unknown"} label={hasBalance ? `${balance.toFixed(4)} POL` : "Unavailable"} />
       </div>
       <p className="health-updated">{loading ? "Refreshing checks…" : health ? `Overall status: ${health.ok ? "healthy" : "degraded"}` : "Waiting for the first health check."}</p>
     </section>

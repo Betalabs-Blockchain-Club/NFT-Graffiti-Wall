@@ -15,7 +15,7 @@
 
 ### Service & Network Health (T-20 min)
 - [ ] **Backend Health:** Open browser to `http://<BACKEND_HOST>:3001/api/health` — confirm `ok: true`, `chain: true`, `ipfs: true`, and a numeric `queueDepth` and `balanceEth`.
-- [ ] **Minter Gas Balance:** Open Admin Dashboard (`web-admin`). Verify minter account balance > **0.05 test-ETH**.
+- [ ] **Minter Gas Balance:** Open Admin Dashboard (`web-admin`). Verify minter account balance > **0.05 POL**.
   - *If low:* Request faucet funds immediately or transfer from reserve admin wallet.
 - [ ] **IPFS Pinning Access:** Perform test pin in Admin panel or verify Pinata JWT quota has >500 pins remaining.
 - [ ] **Gallery Wall:** Open `web-gallery` in fullscreen (F11). Verify green **LIVE SOCKET** indicator and seed artworks render correctly.
@@ -48,7 +48,7 @@
 
 ## 3. Real-Time Shift Checklist (Hourly)
 
-- [ ] Check minter wallet gas balance (`> 0.02 test-ETH`).
+- [ ] Check minter wallet gas balance (`> 0.02 POL`).
 - [ ] Check kiosk tablet screen hygiene (clean stylus/screen with wipe).
 - [ ] Verify `web-gallery` WebSocket connection is green and responsive.
 - [ ] Review pending/hidden items in `web-admin` Queue tab.

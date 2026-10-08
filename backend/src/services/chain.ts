@@ -42,6 +42,7 @@ export type ChainConfig = {
   contractAddress: string;
   minterPrivateKey: string;
   confirmations?: number;
+  expectedChainId?: number;
   provider?: Provider;
 };
 
@@ -166,8 +167,8 @@ export function createChain(config: ChainConfig) {
     mint,
     getBalanceEth: async (): Promise<number> => Number(formatEther(await provider.getBalance(await signer.getAddress()))),
     ping: async (): Promise<boolean> => {
-      await provider.getBlockNumber();
-      return true;
+      const [blockNumber, network] = await Promise.all([provider.getBlockNumber(), provider.getNetwork()]);
+      return blockNumber >= 0 && (config.expectedChainId === undefined || network.chainId === BigInt(config.expectedChainId));
     },
     backfill,
     onArtworkMinted,

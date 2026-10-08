@@ -16,7 +16,7 @@ Staff-only control room: approve/hide art before it hits the public wall, monito
 1. `pages/Queue.tsx` — pending grid with big Approve/Hide, nickname filter highlight.
 2. `pages/Dashboard.tsx` — live health, runtime controls, typed archive reset.
 3. `components/NetworkSwitch.tsx` — `pinata|kubo`, moderation mode, and minting kill switch (via backend config).
-4. `components/QueueHealth.tsx` — chain/IPFS status, queue depth, and wallet balance; red alert below `0.01 ETH`.
+4. `components/QueueHealth.tsx` — chain/IPFS status, queue depth, and POL wallet balance; red alert below `0.01 POL`.
 5. Auth: store `ADMIN_TOKEN` in memory (not localStorage on shared laptop), auto-lock after 5 min.
 6. Reset flow requires the exact current UTC confirmation phrase.
 
@@ -38,7 +38,7 @@ web-admin/
 
 ## 8. Definition of Done
 - [ ] Hide removes from gallery in <3s. Approve shows in <3s.
-- [ ] Kill switch blocks POST but not GET. Balance <0.01 test-ETH shows red banner.
+- [ ] Kill switch blocks POST but not GET. Balance <0.01 POL shows red banner.
 - [ ] Non-authed user gets 401 on all admin calls.
 
 ## 9. Non-goals

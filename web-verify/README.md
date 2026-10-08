@@ -11,7 +11,7 @@ Set these public build-time variables in the hosting provider or `web-verify/.en
 | `VITE_RPC_URL` | yes | Read-only RPC endpoint for the contract's network. |
 | `VITE_CONTRACT_ADDRESS` | yes | Deployed GraffitiWall address on that network. |
 | `VITE_CHAIN_ID` | recommended | Expected decimal chain ID; verification fails if RPC points to another network. |
-| `VITE_EXPLORER_URL` | no | Explorer origin, for example `https://sepolia.basescan.org`. |
+| `VITE_EXPLORER_URL` | no | Polygon Amoy explorer origin, `https://amoy.polygonscan.com/`. |
 | `VITE_IPFS_GATEWAYS` | yes | Comma-separated gateway base URLs, each ending in `/ipfs`, in preferred order. The app tries the next gateway on HTTP, timeout, or browser CORS failure. |
 | `VITE_IPFS_GATEWAY` | legacy | Single gateway fallback when `VITE_IPFS_GATEWAYS` is unset. |
 

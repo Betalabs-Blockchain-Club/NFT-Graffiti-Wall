@@ -32,7 +32,7 @@ Visitors draw on a canvas; the artwork is hashed (SHA-256), pinned to IPFS, mint
 | 5 | **Creator ownership** | With a club wallet minting, the "creator" on-chain is the club | Store the **nickname in metadata + event**; optionally add "claim to my wallet" (transfer to visitor address after the event). |
 | 6 | **Tamper demo honesty** | Tampering an image doesn't alter the chain — it breaks *verification* | Frame it correctly: "the chain remembers the original fingerprint; any edited copy fails the check." Also point out that the IPFS CID itself is a content hash. |
 | 7 | **Spam / abuse** | Someone mints hundreds of items | Rate-limit per session/device, cap size (e.g. ≤ 500 KB), admin kill switch. |
-| 8 | **Test-ETH supply** | Faucets can be rate-limited right before the event | Fund the minter wallet **days early**; ~200 mints costs little on L2 testnets. Keep spare faucet accounts. |
+| 8 | **Test POL supply** | Faucets can be rate-limited right before the event | Fund the minter wallet **days early**; ~200 mints costs little on Amoy. Keep spare faucet accounts. |
 
 ### 1.3 Recommendation
 
@@ -103,7 +103,7 @@ Target: **60–120 seconds** end-to-end.
 | Smart contract | **Solidity 0.8.x**, OpenZeppelin **ERC721URIStorage** + AccessControl | Standard, audited building blocks |
 | Dev tooling | **Hardhat** (or Foundry), TypeChain | Tests, deploy scripts, typed bindings |
 | Chain client | **ethers.js v6** (backend + verify page) | Contract calls and event subscriptions |
-| Network | **Sepolia** or an L2 testnet (Base Sepolia / Polygon Amoy / Arbitrum Sepolia) | Public → phones can verify; L2 = faster/cheaper. Local Hardhat as fallback. |
+| Network | **Polygon Amoy** (chain ID 80002) | Public → phones can verify. Local Hardhat as fallback. |
 | IPFS | **Pinata** (primary), local **Kubo** node (fallback) | Reliable pinning + gateways; offline fallback |
 | Backend | **Node + Express** (or FastAPI) | Mint queue, moderation, IPFS proxy, WebSocket |
 | Realtime | **Socket.IO / WebSocket** | Push new art to the wall instantly |
@@ -294,7 +294,7 @@ config(key, value)            -- network mode, moderation on/off, limits
 ### Phase 0 — Setup (Days 1–2)
 - [ ] Freeze scope (MVP list below), choose network (e.g. an L2 testnet), pick IPFS provider
 - [ ] Create repo (`/contracts`, `/backend`, `/web-kiosk`, `/web-gallery`, `/web-verify`), env templates
-- [ ] Create + fund the minter wallet (test ETH), create Pinata account/API key
+- [ ] Create + fund the minter wallet with test POL, create Pinata account/API key
 
 ### Phase 1 — Contract & pipeline (Week 1)
 - [ ] `GraffitiWall.sol` + tests + deploy script (local and testnet)
@@ -384,7 +384,7 @@ config(key, value)            -- network mode, moderation on/off, limits
 |------|:---:|-----------|
 | Offensive artwork | High | Moderation queue, hide button, nickname filter |
 | Internet/RPC/IPFS outage | High | Retry queue, hotspot, local fallback mode, pre-minted seed art |
-| Minter wallet out of test ETH | High | Pre-fund, balance monitor in admin panel, spare wallets |
+| Minter wallet out of test POL | High | Pre-fund, balance monitor in admin panel, spare wallets |
 | Slow mints → queue builds | Med | Staged animation, L2 testnet, 2nd kiosk, show gallery while waiting |
 | Visitors can't open the verify page | Med | Public static hosting; QR also encodes a short URL |
 | Hash mismatch bugs (re-encoding) | Med | Hash exact uploaded bytes; server recomputes and compares |

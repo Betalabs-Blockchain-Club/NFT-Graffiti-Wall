@@ -8,6 +8,7 @@ dotenv.config({ path: resolve(repoRoot, ".env") });
 
 const schema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+  CHAIN_NETWORK: z.enum(["polygon-amoy", "sepolia", "localhost"]).default("polygon-amoy"),
   RPC_URL: z.string().url(),
   CONTRACT_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   MINTER_PRIVATE_KEY: z.string().regex(/^(0x)?[a-fA-F0-9]{64}$/),
@@ -42,6 +43,7 @@ if (!parsed.success) {
 
 export const env = {
   ...parsed.data,
+  expectedChainId: ({ "polygon-amoy": 80002, sepolia: 11155111, localhost: 31337 } as const)[parsed.data.CHAIN_NETWORK],
   corsOrigins: parsed.data.CORS_ORIGIN.split(",").map((origin) => origin.trim()).filter(Boolean),
   databasePath: parsed.data.DATABASE_URL === ":memory:" ? ":memory:"
     : resolve(repoRoot, parsed.data.DATABASE_URL.startsWith("file:")

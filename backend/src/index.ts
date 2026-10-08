@@ -26,7 +26,7 @@ if (storage.getConfig("IPFS_PROVIDER") === "pinata" && env.IPFS_PROVIDER !== "pi
 }
 if (env.KILL_SWITCH) storage.setConfig({ KILL_SWITCH: true });
 
-const chain = createChain({ rpcUrl: env.RPC_URL, contractAddress: env.CONTRACT_ADDRESS, minterPrivateKey: env.MINTER_PRIVATE_KEY });
+const chain = createChain({ rpcUrl: env.RPC_URL, contractAddress: env.CONTRACT_ADDRESS, minterPrivateKey: env.MINTER_PRIVATE_KEY, expectedChainId: env.expectedChainId });
 const getIpfs = () => createIpfs({
   provider: storage.getConfig("IPFS_PROVIDER"), pinataJwt: env.PINATA_JWT,
   kuboApi: env.KUBO_API, gatewayUrl: env.IPFS_GATEWAY

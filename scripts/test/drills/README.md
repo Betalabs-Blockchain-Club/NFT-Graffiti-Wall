@@ -1,6 +1,6 @@
 # Q1 Local Failure Drills
 
-Use a local Hardhat + Kubo stack and the temporary local account only. Do not point these drills at Base Sepolia or production credentials. Start the backend in another terminal and ensure `IPFS_PROVIDER=kubo`, `RPC_URL=http://127.0.0.1:8545`, and `KUBO_API=http://127.0.0.1:5001`.
+Use a local Hardhat + Kubo stack and the temporary local account only. Do not point these drills at Polygon Amoy or production credentials. Start the backend in another terminal and ensure `IPFS_PROVIDER=kubo`, `RPC_URL=http://127.0.0.1:8545`, and `KUBO_API=http://127.0.0.1:5001`.
 
 ## Load and rate limit
 

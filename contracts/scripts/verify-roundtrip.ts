@@ -8,7 +8,7 @@ import path from "node:path";
  * (expect false). Proves deployments/<network>.json's {address, abi} are
  * usable by a plain ethers client, not just within this Hardhat project.
  *
- * Usage: npx hardhat run scripts/verify-roundtrip.ts --network <localhost|base-sepolia>
+ * Usage: npx hardhat run scripts/verify-roundtrip.ts --network <localhost|polygon-amoy>
  */
 async function main() {
   const deploymentPath = path.join(__dirname, "..", "deployments", `${network.name}.json`);

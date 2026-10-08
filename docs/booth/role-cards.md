@@ -86,7 +86,7 @@ PRIMARY CHECKLIST:
 [ ] Keep `web-admin` Queue tab active on laptop at all times.
 [ ] Review every incoming artwork submission within 5 seconds.
 [ ] If inappropriate content appears, click "Hide" immediately (<2 clicks).
-[ ] Monitor minter wallet gas balance (maintain > 0.05 test-ETH).
+[ ] Monitor minter wallet gas balance (maintain > 0.05 POL).
 [ ] Watch `web-gallery` TV display for socket reconnection or display issues.
 
 EMERGENCY PROTOCOLS:

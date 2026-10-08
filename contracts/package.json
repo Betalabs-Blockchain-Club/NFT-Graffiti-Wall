@@ -5,7 +5,7 @@
   "scripts": {
     "test": "hardhat test",
     "deploy:localhost": "hardhat run scripts/deploy.ts --network localhost",
-    "deploy:testnet": "hardhat run scripts/deploy.ts --network base-sepolia"
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network polygon-amoy"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.0",

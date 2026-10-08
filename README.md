@@ -129,7 +129,7 @@ See root [`AGENT.md`](./AGENT.md) for agent boundaries, and each folder's `AGENT
 | Contract | Solidity 0.8.x, OpenZeppelin ERC721URIStorage + AccessControl | Audited standard |
 | Dev tooling | Hardhat + TypeChain | Tests, deploys, typed bindings |
 | Chain client | ethers.js v6 | Contract calls + events |
-| Network | Base Sepolia or Sepolia; local Hardhat fallback | Public verification or local development |
+| Network | Polygon Amoy (chain ID 80002); local Hardhat fallback | Public verification or local development |
 | IPFS | Pinata or local Kubo, with alternate-provider retry | Content-addressed storage |
 | Backend | Node + Express | Mint queue, moderation API, IPFS pinning, WS |
 | Realtime | Socket.IO / WS | Push to wall + kiosk progress |
@@ -385,9 +385,9 @@ All vars documented in `.env.example`. Key ones:
 
 ```bash
 # Chain
-CHAIN_NETWORK=base-sepolia        # or sepolia | polygon-amoy | localhost
-RPC_URL=https://...
-CONTRACT_ADDRESS=0x...
+CHAIN_NETWORK=polygon-amoy        # or sepolia | localhost
+RPC_URL=https://rpc-amoy.polygon.technology/
+CONTRACT_ADDRESS=                 # fill after Amoy deployment
 MINTER_PRIVATE_KEY=0x...          # BACKEND ONLY, never frontend
 # IPFS
 IPFS_PROVIDER=pinata              # pinata | kubo; tries the alternate provider after failure
@@ -403,6 +403,10 @@ RATE_LIMIT_PER_MIN=5
 KILL_SWITCH=false
 # Frontend (public values only)
 VITE_API_URL=http://localhost:3001
+VITE_RPC_URL=https://rpc-amoy.polygon.technology/
+VITE_CONTRACT_ADDRESS=            # fill after Amoy deployment
+VITE_CHAIN_ID=80002
+VITE_EXPLORER_URL=https://amoy.polygonscan.com/
 VITE_WS_URL=http://localhost:3001
 VITE_VERIFY_URL=https://verify.example.com
 VITE_CONTRACT_ADDRESS=0x...
@@ -441,7 +445,7 @@ Failure drills before event: IPFS down, RPC down, wallet out of gas, Wi-Fi drop,
 |------|:---:|-----------|
 | Offensive artwork | High | Moderation queue, hide button, nickname filter |
 | Internet/RPC/IPFS outage | High | Retry queue, hotspot, local fallback, seed art |
-| Minter out of test ETH | High | Pre-fund, balance monitor, spare wallets |
+| Minter out of test POL | High | Pre-fund, balance monitor, spare wallets |
 | Slow mints → queue | Med | Staged animation, L2, 2nd kiosk, gallery while waiting |
 | Verify page unreachable | Med | Public static hosting, short-URL QR |
 | Hash mismatch (re-encoding) | Med | Hash exact bytes; server recomputes |

@@ -21,7 +21,7 @@ function main() {
   console.log(`  private key: ${spare.privateKey}\n`);
 
   console.log("Next steps:");
-  console.log("  1. Fund both addresses from a Base Sepolia faucet (e.g. https://www.alchemy.com/faucets/base-sepolia).");
+  console.log("  1. Fund the deployer/minter address with POL from a Polygon Amoy faucet.");
   console.log("  2. Put MINTER_PRIVATE_KEY in the local .env (gitignored) — never commit it.");
   console.log("  3. Deploying with the minter key as the deployer account auto-grants it MINTER_ROLE (see GraffitiWall constructor).");
 }

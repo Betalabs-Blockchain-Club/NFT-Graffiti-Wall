@@ -18,8 +18,8 @@ Measured with `REPORT_GAS=true npx hardhat test` against the Hardhat EVM
 | Conservative (avg × 200) | 52 698 400 | Use this for pre-funding |
 | Worst-case (max × 200) | 53 278 400 | Upper bound |
 
-At Base Sepolia / Base Mainnet gas prices the ETH cost is negligible at
-current prices, but pre-fund the minter wallet with at least **0.05 ETH**
+On Polygon Amoy gas is paid in POL; pre-fund the minter wallet with at least
+**0.05 POL**
 to cover all 200 mints plus deployment and a safety margin.
 
 ## Deployment cost
@@ -38,19 +38,19 @@ to cover all 200 mints plus deployment and a safety margin.
   (≈ 266 392). In production every call comes from a different NFT recipient so
   expect figures closer to the minimum.
 
-## Explorer-verify steps (Base Sepolia)
+## Polygon Amoy explorer verification
 
-After `npx hardhat run scripts/deploy.ts --network base-sepolia` use the
+After `npx hardhat run scripts/deploy.ts --network polygon-amoy` use the
 Hardhat `verify` plugin to publish source:
 
 ```bash
-npx hardhat verify --network base-sepolia <DEPLOYED_ADDRESS>
+POLYGONSCAN_API_KEY=<your key> npx hardhat verify --network polygon-amoy <DEPLOYED_ADDRESS>
 ```
 
 No constructor arguments are needed (the constructor takes none).
 
-On success the plugin prints a Basescan URL like:
-`https://sepolia.basescan.org/address/<DEPLOYED_ADDRESS>#code`
+On success, inspect the contract at:
+`https://amoy.polygonscan.com/address/<DEPLOYED_ADDRESS>#code`
 
 Open it and confirm the **Contract** tab shows a green ✓ and the
 **Read Contract** / **Write Contract** sub-tabs are populated.  If
@@ -58,4 +58,4 @@ verification fails with "Already verified", the contract was already
 submitted — that is fine.
 
 After verifying, update `docs/contract.md` with the live address and
-explorer link, and commit `contracts/deployments/base-sepolia.json`.
+explorer link, and commit `contracts/deployments/polygon-amoy.json`.

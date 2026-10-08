@@ -35,7 +35,7 @@ The **only trusted writer**: validates drawings, pins to IPFS, queues + retries 
 
 ## 6. Dependencies
 - Node 20, Express, ethers v6, Pinata SDK / kubo-rpc-client, sqlite (better-sqlite3), Socket.IO, zod.
-- Needs: contract address (from `contracts/`), IPFS reachable, test-ETH funded.
+- Needs: contract address (from `contracts/`), IPFS reachable, minter funded with test POL on Amoy.
 
 ## 7. File layout
 ```text

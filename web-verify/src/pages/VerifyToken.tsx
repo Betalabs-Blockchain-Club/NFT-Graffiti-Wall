@@ -7,7 +7,7 @@ const stageMessages: Record<VerificationStage, string> = { chain: "Reading the o
 function runtimeConfig() {
   const configuredGateways = parseGateways(import.meta.env.VITE_IPFS_GATEWAYS);
   const legacyGateway = parseGateways(import.meta.env.VITE_IPFS_GATEWAY);
-  return { rpcUrl: import.meta.env.VITE_RPC_URL ?? "", contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS ?? "", ipfsGateways: configuredGateways.length ? configuredGateways : legacyGateway, chainId: import.meta.env.VITE_CHAIN_ID, explorerUrl: import.meta.env.VITE_EXPLORER_URL };
+  return { rpcUrl: import.meta.env.VITE_RPC_URL ?? "", contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS ?? "", ipfsGateways: configuredGateways.length ? configuredGateways : legacyGateway, chainId: import.meta.env.VITE_CHAIN_ID ?? "80002", explorerUrl: import.meta.env.VITE_EXPLORER_URL ?? "https://amoy.polygonscan.com/" };
 }
 export function VerifyToken() {
   const { tokenId = "" } = useParams(); const [stage, setStage] = useState<VerificationStage>("chain");

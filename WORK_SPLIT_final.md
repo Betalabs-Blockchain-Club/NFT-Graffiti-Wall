@@ -142,7 +142,7 @@ Each path belongs to one owner. Member 4's integration tasks (I1, I2) may fix bu
 
 | ID | Title | Type | Owner | Phase | Pri | Depends on |
 |---|---|---|---|---|---|---|
-| C1 | contracts: fix deploy script, export ABI, deploy localhost + Base Sepolia, set up wallets | INDEPENDENT | @ambadi565 | P1 Independent | P0 | None |
+| C1 | contracts: fix deploy script, export ABI, deploy localhost + Polygon Amoy, set up wallets | INDEPENDENT | @ambadi565 | P1 Independent | P0 | None |
 | C3 | contracts: round out tests and record gas per mint | INDEPENDENT | @ambadi565 | P1 Independent | P1 | None |
 | E1 | scripts: implement e2e-mint.js (the current stub exits 0 = false pass) | INDEPENDENT | @ambadi565 | P1 Independent | P0 | None |
 | E2 | scripts: seed-wall.js and export-data.js | INDEPENDENT | @ambadi565 | P1 Independent | P1 | None |
@@ -176,7 +176,7 @@ Each path belongs to one owner. Member 4's integration tasks (I1, I2) may fix bu
 | K4 | web-kiosk: MintProgress (4 stages with real hash / CID / tx values) | CORE | @NiranjanRSoorej06 | P2 Core | P1 | K3 |
 | K5 | web-kiosk: CertificateCard (artwork, token id, date, QR, download) | CORE | @NiranjanRSoorej06 | P2 Core | P0 | K3, S1 |
 | I1 | integration: kiosk -> backend -> gallery -> admin full loop on localhost | CORE | @NiranjanRSoorej06 | P3 Integration | P0 | All P1/P2 issues |
-| I2 | integration: Base Sepolia + Pinata, phone verify over cellular | CORE | @NiranjanRSoorej06 | P3 Integration | P0 | I1, C1, V3 |
+| I2 | integration: Polygon Amoy + Pinata, phone verify over cellular | CORE | @NiranjanRSoorej06 | P3 Integration | P0 | I1, C1, V3 |
 | Q1 | backend: failure drills, load test (20-50 mints), secret-leak check | CORE | @NiranjanRSoorej06 | P3 Integration | P1 | I1 |
 | D1 | docs: sync api.md / contract.md / architecture.md and the README quickstart | CORE | @NiranjanRSoorej06 | P3 Integration | P1 | I1 |
 | Q2 | release: Definition-of-Done checklist, bug triage, code freeze, tag | CORE | @NiranjanRSoorej06 | P3 Integration | P0 | I2 |
@@ -187,7 +187,7 @@ Priority: **P0** must ship; **P1** should ship; **P2** cut first. Cut order if b
 
 ### Member 1 - @ambadi565 - Contracts, Scripts & Infra
 
-#### C1 - contracts: fix deploy script, export ABI, deploy localhost + Base Sepolia, set up wallets
+#### C1 - contracts: fix deploy script, export ABI, deploy localhost + Polygon Amoy, set up wallets
 
 - **Type:** INDEPENDENT  |  **Owner:** @ambadi565  |  **Priority:** P0  |  **Phase:** P1 Independent
 - **Depends on:** None
@@ -203,13 +203,13 @@ Priority: **P0** must ship; **P1** should ship; **P2** cut first. Cut order if b
 - **Do:**
   1. **Bug:** `deploy.ts` uses `provider.getNetwork().name`, which is `unknown` on Hardhat, so it writes `deployments/unknown.json`. Use `hre.network.name`.
   2. Write `deployments/<network>.json` = `{address, block, abi}` and also export the ABI to `contracts/abi/GraffitiWall.json` (single source of truth).
-  3. Create the minter wallet and a spare; fund both from a Base Sepolia faucet first thing (faucets rate-limit).
+  3. Create the minter wallet and a spare; fund the deployer/minter from a Polygon Amoy faucet.
   4. Create a Pinata account + JWT. Hand secrets to Member 4 via a password manager only; never commit them. Add the chain/IPFS variables to `.env.example` (variable names only).
-  5. Deploy to `localhost` and `base-sepolia`; commit `deployments/base-sepolia.json`; update `docs/contract.md` with the address and explorer link.
+  5. Deploy to `localhost` and `polygon-amoy`; commit `deployments/polygon-amoy.json`; update `docs/contract.md` with the address and explorer link.
 - **TEST ALONE (no other task needed):** `npx hardhat node` in one terminal, `npx hardhat run scripts/deploy.ts --network localhost` in another. Needs no other issue.
 - **DONE when (all true):**
   - `npx hardhat test` green
-  - `deployments/base-sepolia.json` committed with address + block + abi
+  - `deployments/polygon-amoy.json` committed with address + block + abi after deployment
   - A JS snippet calling `verify()` on testnet round-trips
   - Tests for this task pass locally; PR opened per section 7.
 
@@ -674,7 +674,7 @@ Priority: **P0** must ship; **P1** should ship; **P2** cut first. Cut order if b
   2. Backfill DB rows missing a tokenId from `ArtworkMinted` events.
   3. The key is never logged or returned.
 - **DONE when (all true):**
-  - Mints on a local Hardhat node and on Base Sepolia
+  - Mints on a local Hardhat node and on Polygon Amoy
   - Integration test against a Hardhat node
   - Tests for this task pass locally; PR opened per section 7.
 
@@ -823,7 +823,7 @@ Priority: **P0** must ship; **P1** should ship; **P2** cut first. Cut order if b
   - Kiosk hash == backend sha256 == on-chain `artworkHash`
   - Tests for this task pass locally; PR opened per section 7.
 
-#### I2 - integration: Base Sepolia + Pinata, phone verify over cellular
+#### I2 - integration: Polygon Amoy + Pinata, phone verify over cellular
 
 - **Type:** CORE  |  **Owner:** @NiranjanRSoorej06  |  **Priority:** P0  |  **Phase:** P3 Integration
 - **Depends on:** I1, C1, V3
