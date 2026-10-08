@@ -44,7 +44,7 @@ describe("gallery visibility", () => {
 
 describe("admin authentication and moderation", () => {
   const routes = [
-    { method: "post", path: "/api/admin/artworks/art-1/approve" },
+    { method: "post", path: "/api/admin/artworks/art-1/mint" },
     { method: "post", path: "/api/admin/artworks/art-1/hide" },
     { method: "put", path: "/api/admin/config" },
     { method: "post", path: "/api/admin/reset" }
@@ -63,9 +63,9 @@ describe("admin authentication and moderation", () => {
     expect(f.hooks.onHidden).not.toHaveBeenCalled();
   });
 
-  it("approves and hides through injected hooks without importing realtime", async () => {
+  it("mints, publishes, and hides through injected hooks without importing realtime", async () => {
     seed(f.storage);
-    const approved = await request(f.app).post("/api/admin/artworks/art-1/approve").set("Authorization", auth);
+    const approved = await request(f.app).post("/api/admin/artworks/art-1/mint").set("Authorization", auth);
     expect(approved.status).toBe(200);
     expect(approved.body.item).toMatchObject({ id: "art-1", status: "approved" });
     expect(f.hooks.onApproved).toHaveBeenCalledWith(approved.body.item);
@@ -77,7 +77,7 @@ describe("admin authentication and moderation", () => {
   });
 
   it("returns 404 for absent artwork without calling hooks", async () => {
-    for (const action of ["approve", "hide"]) {
+    for (const action of ["mint", "hide"]) {
       expect((await request(f.app).post(`/api/admin/artworks/missing/${action}`).set("Authorization", auth)).status).toBe(404);
     }
     expect(f.hooks.onApproved).not.toHaveBeenCalled();
@@ -111,18 +111,18 @@ describe("admin authentication and moderation", () => {
     expect((await request(f.app).get("/api/gallery")).body.items).toEqual([]);
     expect(f.db.prepare("SELECT COUNT(*) AS n FROM artworks").get()).toEqual({ n: 1 });
     expect(f.db.prepare("SELECT COUNT(*) AS n FROM votes").get()).toEqual({ n: 1 });
-    expect((await request(f.app).post("/api/admin/artworks/art-1/approve").set("Authorization", auth)).status).toBe(404);
+    expect((await request(f.app).post("/api/admin/artworks/art-1/mint").set("Authorization", auth)).status).toBe(409);
   });
 
   it("catches rejected async hooks without exposing the failure details", async () => {
     seed(f.storage);
     f.hooks.onApproved.mockRejectedValue(new Error("SECRET_PROVIDER_CREDENTIAL"));
-    const response = await request(f.app).post("/api/admin/artworks/art-1/approve").set("Authorization", auth);
+    const response = await request(f.app).post("/api/admin/artworks/art-1/mint").set("Authorization", auth);
     expect(response.status).toBe(500);
     expect(response.text).not.toContain("SECRET_PROVIDER_CREDENTIAL");
     expect(f.storage.getById("art-1")?.status).toBe("approved");
     f.hooks.onApproved.mockResolvedValue(undefined);
-    expect((await request(f.app).post("/api/admin/artworks/art-1/approve").set("Authorization", auth)).status).toBe(200);
+    expect((await request(f.app).post("/api/admin/artworks/art-1/mint").set("Authorization", auth)).status).toBe(200);
   });
 
   it("attempts all reset notifications when one hook fails, preserving the archive", async () => {
@@ -152,7 +152,7 @@ describe("admin authentication and moderation", () => {
     expect(() => adminAuth("")).toThrow(RangeError);
     expect(() => adminAuth("has whitespace")).toThrow(RangeError);
     seed(f.storage);
-    expect((await request(f.app).post("/api/admin/artworks/art-1/approve").set("Authorization", `bearer ${ADMIN_TOKEN}`)).status).toBe(200);
+    expect((await request(f.app).post("/api/admin/artworks/art-1/mint").set("Authorization", `bearer ${ADMIN_TOKEN}`)).status).toBe(200);
   });
 });
 

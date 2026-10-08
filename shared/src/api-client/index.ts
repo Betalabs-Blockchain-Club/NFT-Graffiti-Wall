@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { GalleryItem, MintJob } from "../types/index.js";
 
-const JobStageSchema = z.enum(["hashing", "uploading", "minting", "confirmed", "failed"]);
+const JobStageSchema = z.enum(["hashing", "uploading", "ready", "minting", "confirmed", "failed"]);
 const ArtworkStatusSchema = z.enum(["pending", "minted", "approved", "hidden", "failed"]);
 const GalleryStatusSchema = z.enum(["pending", "minted", "approved", "hidden"]);
 
@@ -193,8 +193,8 @@ export function createApiClient({ baseUrl, adminToken, fetchImpl = fetch }: ApiC
       });
     },
 
-    approve(id: string): Promise<GalleryItem | undefined> {
-      return request(`/api/admin/artworks/${encodeURIComponent(id)}/approve`, ActionResponseSchema, {
+    mint(id: string): Promise<GalleryItem | undefined> {
+      return request(`/api/admin/artworks/${encodeURIComponent(id)}/mint`, ActionResponseSchema, {
         method: "POST",
         headers: authHeaders(true)
       });

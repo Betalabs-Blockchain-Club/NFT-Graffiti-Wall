@@ -39,8 +39,7 @@ const httpServer = createServer(app);
 const realtime = createRealtime(httpServer, { allowedOrigin: env.corsOrigins });
 const queue = createMintQueue({
   ipfs: { pinImage: (bytes) => getIpfs().pinImage(bytes), pinMetadata: (metadata) => getIpfs().pinMetadata(metadata) },
-  chain, storage, realtime: { onJob: (job) => realtime.emitJob(job.jobId, job) },
-  moderationMode: "display_after_approve"
+  chain, storage, realtime: { onJob: (job) => realtime.emitJob(job.jobId, job) }
 });
 
 app.use(createHealthRouter({ checks: {
@@ -64,7 +63,7 @@ app.use("/api/artworks", createArtworksRouter({
   deviceKey: (req) => req.get("X-Device-Id")?.trim() || req.ip || "unknown"
 }));
 app.use(createGalleryRouter({ storage, adminToken: env.ADMIN_TOKEN }));
-app.use(createAdminRouter({ storage, adminToken: env.ADMIN_TOKEN, hooks: {
+app.use(createAdminRouter({ storage, queue, adminToken: env.ADMIN_TOKEN, hooks: {
   onApproved: (item) => realtime.emitNew(item), onHidden: (id) => realtime.emitHide(id)
 } }));
 app.use(createVotesRouter({ storage }));

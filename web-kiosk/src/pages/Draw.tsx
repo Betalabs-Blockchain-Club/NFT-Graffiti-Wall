@@ -32,7 +32,7 @@ export function Draw() {
         </div>
         <button className="back-button" onClick={() => navigate("/")}><ChevronLeft size={20} /> Start over</button>
       </div>
-      <DrawingCanvas ref={canvasRef} />
+      <DrawingCanvas ref={canvasRef} onTimeUp={() => void continueToNickname()} />
       {error && <p className="drawing-error" role="alert">{error}</p>}
       <button className="continue-drawing primary-action" onClick={() => void continueToNickname()} disabled={exporting}>
         {exporting ? "Preparing exact PNG..." : "Keep this drawing"} <ArrowRight size={22} />

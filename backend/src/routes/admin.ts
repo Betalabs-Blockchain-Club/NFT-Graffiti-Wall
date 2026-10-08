@@ -4,25 +4,55 @@ import { route } from "../db/http.js";
 import { toGalleryItem, type GalleryItem } from "../db/types.js";
 import { StorageError } from "../db/errors.js";
 import type { Storage } from "../services/storage.js";
+import type { createMintQueue } from "../services/queue.js";
+
+type Queue = ReturnType<typeof createMintQueue>;
 
 export interface AdminOptions {
   storage: Storage;
+  queue: Queue;
   adminToken: string;
   hooks: { onApproved: (item: GalleryItem) => void | Promise<void>; onHidden: (id: string) => void | Promise<void> };
 }
 
-export function createAdminRouter({ storage, adminToken, hooks }: AdminOptions): Router {
+export function createAdminRouter({ storage, queue, adminToken, hooks }: AdminOptions): Router {
   const router = Router();
   router.use("/api/admin", adminAuth(adminToken));
-  router.post("/api/admin/artworks/:jobId/approve", route(async (req, res) => {
-    const item = toGalleryItem(storage.setStatus(req.params.jobId, "approved"));
+  router.post("/api/admin/artworks/:jobId/mint", route(async (req, res) => {
+    const existing = storage.getById(req.params.jobId);
+    if (!existing) throw new StorageError("not-found", "Artwork not found", 404);
+    if (existing.tokenId != null && existing.status === "approved") {
+      return res.json({ item: toGalleryItem(existing) });
+    }
+    if (existing.status !== "pending") throw new StorageError("not-ready", "Only pending artwork can be minted", 409);
+    const currentJob = queue.getStatus(req.params.jobId);
+    if (currentJob?.stage !== "ready" && !(currentJob?.stage === "failed" && currentJob.imageCID)) {
+      throw new StorageError("not-ready", currentJob?.error ?? "Artwork is still being prepared for minting", 409);
+    }
+    const job = await queue.mint(req.params.jobId);
+    if (job.stage !== "confirmed") throw new StorageError("mint-failed", job.error ?? "Mint transaction failed", 502);
+    const item = toGalleryItem(storage.getById(req.params.jobId)!);
     await hooks.onApproved(item);
-    res.json({ item });
+    res.json({ item, job });
+  }));
+  router.post("/api/admin/artworks/:jobId/retry-ipfs", route(async (req, res) => {
+    const existing = storage.getById(req.params.jobId);
+    if (!existing) throw new StorageError("not-found", "Artwork not found", 404);
+    if (existing.status !== "pending") throw new StorageError("not-ready", "Only pending artwork can be retried", 409);
+    const job = await queue.retryPin(req.params.jobId);
+    res.json({ job });
   }));
   router.post("/api/admin/artworks/:jobId/hide", route(async (req, res) => {
     const artwork = storage.setStatus(req.params.jobId, "hidden");
     await hooks.onHidden(artwork.id);
     res.json({ item: toGalleryItem(artwork) });
+  }));
+  router.post("/api/admin/artworks/:jobId/restore", route(async (req, res) => {
+    const artwork = storage.getById(req.params.jobId);
+    if (!artwork) throw new StorageError("not-found", "Artwork not found", 404);
+    const item = toGalleryItem(storage.setStatus(req.params.jobId, artwork.tokenId == null ? "pending" : "approved"));
+    if (item.status === "approved") await hooks.onApproved(item);
+    res.json({ item });
   }));
   router.put("/api/admin/config", route((req, res) => {
     res.json(storage.setConfig(req.body));

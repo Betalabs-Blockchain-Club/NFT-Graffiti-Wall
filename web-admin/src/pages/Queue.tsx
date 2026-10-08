@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { ApiError, artworkImageUrl, listQueue, moderate } from "../lib/api";
+import { ApiError, artworkImageUrl, getArtworkJob, hideArtwork, listQueue, mintArtwork, retryArtworkIpfs, restoreArtwork, type AdminJob } from "../lib/api";
 import { AdminHeader, type AdminPage } from "../components/AdminHeader";
 import type { GalleryItem, QueueStatus } from "../types";
 
 const tabs: Array<{ id: QueueStatus; label: string }> = [
   { id: "pending", label: "Pending" },
+  { id: "approved", label: "Published" },
   { id: "minted", label: "Minted" },
   { id: "hidden", label: "Hidden" }
 ];
@@ -23,11 +24,22 @@ export function Queue({ token, onLock, onUnauthorized, onNavigate }: QueueProps)
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busyId, setBusyId] = useState("");
+  const [jobs, setJobs] = useState<Record<string, AdminJob>>({});
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
-    try { setItems(await listQueue(status, token)); }
+    try {
+      const nextItems = await listQueue(status, token);
+      setItems(nextItems);
+      if (status === "pending") {
+        const entries = await Promise.all(nextItems.map(async (item) => {
+          try { return [item.id, await getArtworkJob(item.id, token)] as const; }
+          catch { return [item.id, { jobId: item.id, stage: "unknown" as const, error: "Mint preparation status unavailable." }] as const; }
+        }));
+        setJobs(Object.fromEntries(entries));
+      }
+    }
     catch (cause) {
       const message = cause instanceof Error ? cause.message : "Could not load the moderation queue.";
       if (cause instanceof ApiError && cause.status === 401) onUnauthorized(message);
@@ -37,15 +49,38 @@ export function Queue({ token, onLock, onUnauthorized, onNavigate }: QueueProps)
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  async function act(item: GalleryItem, action: "approve" | "hide") {
+  useEffect(() => {
+    if (status !== "pending" || items.length === 0) return;
+    let active = true;
+    const refreshJobs = async () => {
+      const entries = await Promise.all(items.map(async (item) => {
+        try { return [item.id, await getArtworkJob(item.id, token)] as const; }
+        catch { return null; }
+      }));
+      if (active) setJobs((current) => ({ ...current, ...Object.fromEntries(entries.filter((entry) => entry !== null)) }));
+    };
+    const interval = window.setInterval(() => void refreshJobs(), 1500);
+    return () => { active = false; window.clearInterval(interval); };
+  }, [items, status, token]);
+
+  async function act(item: GalleryItem, action: "mint" | "hide" | "restore" | "retry-ipfs") {
     const previousItems = items;
     setBusyId(item.id);
     setNotice("");
     setItems((current) => current.filter((entry) => entry.id !== item.id));
     try {
-      const updated = await moderate(item.id, action, token);
-      setNotice(action === "hide" ? `${item.nickname} was hidden.` : `${item.nickname} was approved and restored.`);
-      if (updated.status === status) setItems((current) => [updated, ...current]);
+      if (action === "retry-ipfs") {
+        const result = await retryArtworkIpfs(item.id, token);
+        setJobs((current) => ({ ...current, [item.id]: result.job }));
+        setItems((current) => [item, ...current.filter((entry) => entry.id !== item.id)]);
+        if (result.job.stage === "ready") setNotice(`IPFS pinning succeeded for ${item.nickname}. It is ready to mint.`);
+        else setError(result.job.error ?? `IPFS retry failed for ${item.nickname}.`);
+      } else {
+        const updated = action === "hide" ? await hideArtwork(item.id, token)
+          : action === "restore" ? await restoreArtwork(item.id, token) : await mintArtwork(item.id, token);
+        setNotice(action === "hide" ? `${item.nickname} was hidden.` : action === "restore" ? `${item.nickname} was published.` : `${item.nickname} was minted and published.`);
+        if (updated.status === status) setItems((current) => [updated, ...current]);
+      }
     } catch (cause) {
       setItems(previousItems);
       const message = cause instanceof Error ? cause.message : "The moderation action failed.";
@@ -59,7 +94,7 @@ export function Queue({ token, onLock, onUnauthorized, onNavigate }: QueueProps)
       <AdminHeader page="queue" onNavigate={onNavigate} onLock={onLock} />
 
       <section className="queue-heading" id="top">
-        <div><p className="eyebrow">WALL CONTROL</p><h1>Artwork queue</h1><p className="muted">Review each submission before it appears on the public wall.</p></div>
+        <div><p className="eyebrow">WALL CONTROL</p><h1>Artwork queue</h1><p className="muted">Mint prepared submissions to publish them on the public wall.</p></div>
         <button className="button button-outline" onClick={() => void refresh()} disabled={loading}>↻ <span>Refresh</span></button>
       </section>
 
@@ -83,14 +118,23 @@ export function Queue({ token, onLock, onUnauthorized, onNavigate }: QueueProps)
                 <div className="creator-row"><span className="nickname">{item.nickname}</span>{item.tokenId != null && <span className="token-id">#{item.tokenId}</span>}</div>
                 <p className="art-meta">Submitted {formatDate(item.createdAt)}</p>
                 <p className="art-cid" title={item.imageCID}>CID · {item.imageCID}</p>
+                {status === "pending" && <p className="art-meta" role="status">
+                  {jobs[item.id]?.stage === "failed" ? `${jobs[item.id]?.imageCID ? "Mint failed" : "IPFS failed"}: ${jobs[item.id]?.error ?? "Retry the operation."}`
+                    : jobs[item.id]?.stage === "ready" ? "Image and metadata are pinned. Ready to mint."
+                      : `Preparing artwork: ${jobs[item.id]?.stage ?? "checking status"}…`}
+                </p>}
                 <div className="card-actions">
-                  <button className="button button-primary" onClick={() => void act(item, "approve")} disabled={Boolean(busyId)}>{status === "hidden" ? "Restore" : "Approve"}</button>
+                  {status === "pending" && jobs[item.id]?.stage === "ready" && <button className="button button-primary" onClick={() => void act(item, "mint")} disabled={Boolean(busyId)}>Mint NFT</button>}
+                  {status === "pending" && jobs[item.id]?.stage === "failed" && jobs[item.id]?.imageCID && <button className="button button-primary" onClick={() => void act(item, "mint")} disabled={Boolean(busyId)}>Retry mint</button>}
+                  {status === "pending" && jobs[item.id]?.stage === "failed" && !jobs[item.id]?.imageCID && <button className="button button-primary" onClick={() => void act(item, "retry-ipfs")} disabled={Boolean(busyId)}>Retry IPFS</button>}
                   {status !== "hidden" && <button className="button button-danger" onClick={() => void act(item, "hide")} disabled={Boolean(busyId)}>Hide</button>}
+                  {status === "hidden" && <button className="button button-primary" onClick={() => void act(item, "restore")} disabled={Boolean(busyId)}>Restore</button>}
+                  {status === "minted" && <button className="button button-primary" onClick={() => void act(item, "restore")} disabled={Boolean(busyId)}>Publish</button>}
                 </div>
               </div>
             </article>)}
           </section>}
-      <footer className="queue-footer">Moderation decisions are recorded by the Graffiti Wall backend.</footer>
+      <footer className="queue-footer">Minting is recorded on chain; successful NFTs publish to the wall automatically.</footer>
     </main>
   );
 }

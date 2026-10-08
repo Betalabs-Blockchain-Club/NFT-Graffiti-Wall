@@ -55,11 +55,11 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, hasLeaderboard 
               type="button"
               onClick={() => setSelectedItem(item)}
               aria-label={`Open artwork by ${item.nickname}`}
-              className="relative aspect-square w-full bg-[#0a0c13] flex items-center justify-center p-2 overflow-hidden cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400"
+              className="relative aspect-square w-full bg-white flex items-center justify-center p-2 overflow-hidden cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400"
             >
               <ArtworkImage
                 item={item}
-                className="w-full h-full object-contain rounded-lg transition-transform duration-300 group-hover:scale-105"
+                className="w-full h-full object-contain rounded-lg bg-white transition-transform duration-300 group-hover:scale-105"
               />
             </button>
 
@@ -121,7 +121,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, hasLeaderboard 
           <ArtworkImage
             item={selectedItem}
             loading="eager"
-            className="max-h-full max-w-full object-contain cursor-zoom-out"
+          className="max-h-full max-w-full object-contain bg-white cursor-zoom-out"
             onClick={(event) => event.stopPropagation()}
           />
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-4 py-2 text-sm font-semibold text-white">

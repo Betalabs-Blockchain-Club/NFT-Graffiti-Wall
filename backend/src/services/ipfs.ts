@@ -144,7 +144,14 @@ export function createIpfs({ provider, pinataJwt, kuboApi, fetchImpl = globalThi
       try { return await request(target, file, filename, json); }
       catch (error) { failures.push(error as IpfsError); }
     }
-    throw new IpfsError("IPFS pinning failed for both providers", failures.some((error) => error.retryable), "all-providers-failed");
+    // Keep the aggregate safe to return from the job status API while retaining
+    // enough detail for staff to tell a bad credential from an outage.
+    const details = failures.map((error) => {
+      const providerName = error.provider ?? "provider";
+      const reason = error.status ? `HTTP ${error.status}` : error.message;
+      return `${providerName}: ${reason}`;
+    }).join("; ");
+    throw new IpfsError(`IPFS pinning failed for both providers (${details})`, failures.some((error) => error.retryable), "all-providers-failed");
   }
 
   return {

@@ -84,6 +84,13 @@ export function createStorage(dbPathOrDb: string | Database.Database) {
       return mustExist(input.id);
     },
     getById,
+    setPinned(id: string, imageCID: string, metadataCID: string): Artwork {
+      mustExist(id);
+      requiredString(imageCID, "imageCID"); requiredString(metadataCID, "metadataCID");
+      db.prepare("UPDATE artworks SET image_cid=?,metadata_cid=? WHERE id=? AND archived_at IS NULL AND token_id IS NULL")
+        .run(imageCID, metadataCID, id);
+      return mustExist(id);
+    },
     setMinted(input: MintedArtwork): Artwork {
       mustExist(input.id);
       if (!Number.isSafeInteger(input.tokenId) || input.tokenId < 0 || !Number.isSafeInteger(input.blockNumber) || input.blockNumber < 0) {

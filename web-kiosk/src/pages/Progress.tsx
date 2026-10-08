@@ -39,8 +39,6 @@ export function Progress() {
         nickname={nickname}
         job={job}
         isConnected={controller.isConnected}
-        isSubmitting={controller.isSubmitting}
-        onRetry={() => void controller.retry()}
         onContinue={() => navigate("/certificate", { state: { artwork, nickname, job } })}
       />
     </main>

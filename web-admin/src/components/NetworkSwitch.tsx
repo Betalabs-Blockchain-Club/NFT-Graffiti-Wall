@@ -20,13 +20,6 @@ export function NetworkSwitch({ config, saving, onChange }: NetworkSwitchProps) 
           {(["pinata", "kubo"] as const).map((provider) => <button type="button" key={provider} className={`choice-button ${config?.IPFS_PROVIDER === provider ? "choice-selected" : ""}`} aria-pressed={config?.IPFS_PROVIDER === provider} onClick={() => onChange({ IPFS_PROVIDER: provider })}>{provider === "pinata" ? "Pinata" : "Kubo"}</button>)}
         </div>
       </fieldset>
-      <fieldset className="setting-group" disabled={!config || saving}>
-        <legend>Moderation mode</legend>
-        <div className="choice-row choice-stacked">
-          <button type="button" className={`choice-button ${config?.MODERATION_MODE === "display_after_approve" ? "choice-selected" : ""}`} aria-pressed={config?.MODERATION_MODE === "display_after_approve"} onClick={() => onChange({ MODERATION_MODE: "display_after_approve" })}><strong>Approve then display</strong><small>Mint on submission; show only after approval.</small></button>
-          <button type="button" className={`choice-button ${config?.MODERATION_MODE === "mint_after_approve" ? "choice-selected" : ""}`} aria-pressed={config?.MODERATION_MODE === "mint_after_approve"} onClick={() => onChange({ MODERATION_MODE: "mint_after_approve" })}><strong>Approve then mint</strong><small>Wait for approval before minting.</small></button>
-        </div>
-      </fieldset>
       {saving && <p className="setting-saving" role="status">Saving setting…</p>}
     </section>
   );

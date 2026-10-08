@@ -5,7 +5,6 @@ const port = Number(process.env.PORT ?? 3001);
 const adminToken = process.env.ADMIN_TOKEN ?? "mock-admin-token";
 const colors = ["#fa6b4a", "#b2ef62", "#aa8cff", "#53d4d1", "#f6b74a", "#ee7db0"];
 const config = {
-  MODERATION_MODE: "display_after_approve",
   KILL_SWITCH: false,
   IPFS_PROVIDER: "pinata"
 };
@@ -76,6 +75,13 @@ const server = createServer(async (req, res) => {
     return sendJson(res, 200, { ok: chain && ipfs && balanceEth !== false, chain, ipfs, queueDepth, balanceEth });
   }
 
+  const jobMatch = url.pathname.match(/^\/api\/artworks\/([^/]+)\/status$/);
+  if (req.method === "GET" && jobMatch) {
+    const item = records.get(decodeURIComponent(jobMatch[1]));
+    if (!item) return sendJson(res, 404, { code: "not_found", message: "Artwork not found." });
+    return sendJson(res, 200, { jobId: item.id, stage: item.status === "pending" ? "ready" : item.status === "approved" ? "confirmed" : "failed", imageCID: item.imageCID, metadataCID: `meta-${item.imageCID}`, tokenId: item.tokenId });
+  }
+
   if (req.method === "PUT" && url.pathname === "/api/admin/config") {
     if (!authorized(req)) return unauthorized(res);
     let body;
@@ -86,8 +92,7 @@ const server = createServer(async (req, res) => {
     } catch { return sendJson(res, 400, { code: "invalid-config", message: "Config must be valid JSON." }); }
     if (!body || typeof body !== "object" || Array.isArray(body)) return sendJson(res, 400, { code: "invalid-config", message: "Config must be an object." });
     const valid = Object.entries(body).every(([key, value]) =>
-      key === "MODERATION_MODE" ? value === "display_after_approve" || value === "mint_after_approve"
-        : key === "KILL_SWITCH" ? typeof value === "boolean"
+      key === "KILL_SWITCH" ? typeof value === "boolean"
           : key === "IPFS_PROVIDER" ? value === "pinata" || value === "kubo" : false);
     if (!valid) return sendJson(res, 400, { code: "invalid-config", message: "Unsupported config key or value." });
     Object.assign(config, body);
@@ -111,11 +116,17 @@ const server = createServer(async (req, res) => {
 
   if (req.method === "POST" && url.pathname.startsWith("/api/admin/artworks/")) {
     if (!authorized(req)) return unauthorized(res);
-    const match = url.pathname.match(/^\/api\/admin\/artworks\/([^/]+)\/(approve|hide)$/);
+    const match = url.pathname.match(/^\/api\/admin\/artworks\/([^/]+)\/(mint|hide|restore|retry-ipfs)$/);
     if (!match) return sendJson(res, 404, { code: "not-found", message: "Moderation route not found." });
     const id = decodeURIComponent(match[1]);
     const item = records.get(id);
     if (!item) return sendJson(res, 404, { code: "not-found", message: "Artwork not found." });
+    if (match[2] === "retry-ipfs") return sendJson(res, 200, { job: { jobId: id, stage: "ready", imageCID: item.imageCID, metadataCID: `meta-${item.imageCID}` } });
+    if (match[2] === "mint") {
+      item.status = "approved";
+      item.tokenId ??= 100 + records.size;
+      return sendJson(res, 200, { item: { ...item }, job: { jobId: id, stage: "confirmed", tokenId: item.tokenId } });
+    }
     item.status = match[2] === "hide" ? "hidden" : "approved";
     return sendJson(res, 200, { item: { ...item } });
   }

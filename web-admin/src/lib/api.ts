@@ -18,9 +18,18 @@ export interface HealthSummary {
 }
 
 export interface AdminConfig {
-  MODERATION_MODE: "display_after_approve" | "mint_after_approve";
   KILL_SWITCH: boolean;
   IPFS_PROVIDER: "pinata" | "kubo";
+}
+
+export interface AdminJob {
+  jobId: string;
+  stage: "hashing" | "uploading" | "ready" | "minting" | "confirmed" | "failed" | "unknown";
+  imageCID?: string;
+  metadataCID?: string;
+  retry?: number;
+  error?: string;
+  tokenId?: number;
 }
 
 async function request<T>(path: string, token: string, init: RequestInit = {}): Promise<T> {
@@ -76,10 +85,30 @@ export async function listQueue(status: QueueStatus, token: string): Promise<Gal
   return items;
 }
 
-export async function moderate(id: string, action: "approve" | "hide", token: string): Promise<GalleryItem> {
-  const result = await request<{ item?: GalleryItem }>(`/api/admin/artworks/${encodeURIComponent(id)}/${action}`, token, { method: "POST" });
+export async function mintArtwork(id: string, token: string): Promise<GalleryItem> {
+  const result = await request<{ item?: GalleryItem }>(`/api/admin/artworks/${encodeURIComponent(id)}/mint`, token, { method: "POST" });
   if (!result.item) throw new ApiError("The server did not return the updated artwork.", 502);
   return result.item;
+}
+
+export async function hideArtwork(id: string, token: string): Promise<GalleryItem> {
+  const result = await request<{ item?: GalleryItem }>(`/api/admin/artworks/${encodeURIComponent(id)}/hide`, token, { method: "POST" });
+  if (!result.item) throw new ApiError("The server did not return the updated artwork.", 502);
+  return result.item;
+}
+
+export async function restoreArtwork(id: string, token: string): Promise<GalleryItem> {
+  const result = await request<{ item?: GalleryItem }>(`/api/admin/artworks/${encodeURIComponent(id)}/restore`, token, { method: "POST" });
+  if (!result.item) throw new ApiError("The server did not return the restored artwork.", 502);
+  return result.item;
+}
+
+export function retryArtworkIpfs(id: string, token: string): Promise<{ job: AdminJob }> {
+  return request<{ job: AdminJob }>(`/api/admin/artworks/${encodeURIComponent(id)}/retry-ipfs`, token, { method: "POST" });
+}
+
+export function getArtworkJob(id: string, token: string): Promise<AdminJob> {
+  return request<AdminJob>(`/api/artworks/${encodeURIComponent(id)}/status`, token);
 }
 
 export function artworkImageUrl(item: GalleryItem): string {

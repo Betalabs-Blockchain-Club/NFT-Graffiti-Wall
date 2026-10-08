@@ -1,11 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, LoaderCircle, RotateCcw, Wifi, WifiOff } from "lucide-react";
+import { Check, LoaderCircle, Wifi, WifiOff } from "lucide-react";
 import type { MintJobState } from "../../hooks/useMintJob";
 
-const stages = ["hashing", "uploading", "minting", "confirmed"] as const;
+const stages = ["hashing", "uploading", "ready", "minting", "confirmed"] as const;
 const labels: Record<typeof stages[number], string> = {
   hashing: "Hashing",
   uploading: "Uploading",
+  ready: "Ready for mint",
   minting: "Minting",
   confirmed: "Confirmed"
 };
@@ -14,12 +15,10 @@ type MintProgressProps = {
   nickname: string;
   job: MintJobState;
   isConnected: boolean;
-  isSubmitting: boolean;
-  onRetry: () => void;
   onContinue: () => void;
 };
 
-export function MintProgress({ nickname, job, isConnected, isSubmitting, onRetry, onContinue }: MintProgressProps) {
+export function MintProgress({ nickname, job, isConnected, onContinue }: MintProgressProps) {
   const failed = job.stage === "failed" || Boolean(job.error);
   const activeIndex = job.stage ? stages.indexOf(job.stage as typeof stages[number]) : -1;
   const percent = failed ? 100 : job.stage === "confirmed" ? 100 : Math.max(8, ((activeIndex + 0.5) / stages.length) * 100);
@@ -31,7 +30,7 @@ export function MintProgress({ nickname, job, isConnected, isSubmitting, onRetry
           <div className="stub-kicker">03 / minting your proof</div>
           <AnimatePresence mode="wait">
             <motion.h1 key={failed ? "failed" : job.stage ?? "starting"} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-              {failed ? "One more try." : job.stage === "confirmed" ? "Proof complete." : "Your mark is moving."}
+              {failed ? "Staff help needed." : job.stage === "ready" ? "Your artwork is ready." : job.stage === "confirmed" ? "Proof complete." : "Your mark is moving."}
             </motion.h1>
           </AnimatePresence>
         </div>
@@ -40,7 +39,7 @@ export function MintProgress({ nickname, job, isConnected, isSubmitting, onRetry
           {isConnected ? "Live status" : "Polling fallback"}
         </div>
       </div>
-      <p className="progress-subtitle">{failed ? job.error : `Creating a blockchain certificate for ${nickname}.`}</p>
+      <p className="progress-subtitle">{failed ? job.error : job.stage === "ready" ? "Your artwork is pinned and waiting for staff to mint it." : `Creating a blockchain certificate for ${nickname}.`}</p>
       <div className="progress-meter" aria-hidden="true"><motion.span animate={{ width: `${percent}%` }} transition={{ duration: 0.5 }} /></div>
       <div className="progress-stages">
         {stages.map((stage, index) => {
@@ -61,7 +60,7 @@ export function MintProgress({ nickname, job, isConnected, isSubmitting, onRetry
         {job.retryInfo && <><span>Queue</span><code>{job.retryInfo}</code></>}
       </div>
       {failed ? (
-        <button className="primary-action" onClick={onRetry} disabled={isSubmitting}><RotateCcw size={20} /> {isSubmitting ? "Retrying..." : "Retry mint"}</button>
+        <div className="connection-note">Please ask a staff member to retry this artwork from the admin queue.</div>
       ) : job.stage === "confirmed" ? (
         <button className="primary-action" onClick={onContinue}>Continue <Check size={20} /></button>
       ) : (

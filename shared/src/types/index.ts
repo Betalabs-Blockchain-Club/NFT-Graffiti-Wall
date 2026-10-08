@@ -1,4 +1,4 @@
-export type JobStage = "hashing" | "uploading" | "minting" | "confirmed" | "failed";
+export type JobStage = "hashing" | "uploading" | "ready" | "minting" | "confirmed" | "failed";
 export type ArtworkStatus = "pending" | "minted" | "approved" | "hidden" | "failed";
 
 export interface Artwork {

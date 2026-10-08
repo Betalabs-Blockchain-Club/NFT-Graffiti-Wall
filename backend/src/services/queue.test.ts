@@ -46,17 +46,19 @@ function options(overrides: Partial<Parameters<typeof createMintQueue>[0]> = {})
 }
 
 describe("mint queue", () => {
-	it("confirms a valid PNG and stores the minted result", async () => {
+	it("pins a valid PNG and waits for an admin mint", async () => {
 		const storage = { setMinted: vi.fn(), setStatus: vi.fn() };
 		const realtime = { onJob: vi.fn() };
 		const queue = createMintQueue({ ...options(), storage, realtime });
 
 		queue.enqueue(input);
-		const job = await waitFor(queue, (value) => value?.stage === "confirmed");
+		const prepared = await waitFor(queue, (value) => value?.stage === "ready");
+		expect(prepared).toMatchObject({ stage: "ready", imageCID: "bafy-image", metadataCID: "bafy-metadata" });
+		const job = await queue.mint("job-1");
 
 		expect(job).toMatchObject({ stage: "confirmed", tokenId: 7, txHash: "0xtx", imageCID: "bafy-image", metadataCID: "bafy-metadata" });
 		expect(storage.setMinted).toHaveBeenCalledWith(expect.objectContaining({ id: "job-1", blockNumber: 12 }));
-		expect(storage.setStatus).toHaveBeenCalledWith("job-1", "minted");
+		expect(storage.setStatus).toHaveBeenCalledWith("job-1", "approved");
 		expect(realtime.onJob).toHaveBeenCalledWith(expect.objectContaining({ stage: "confirmed" }));
 		queue.close();
 	});
@@ -69,10 +71,11 @@ describe("mint queue", () => {
 		const queue = createMintQueue({ ...config, maxRetries: 1 });
 
 		queue.enqueue(input);
-		const job = await waitFor(queue, (value) => value?.stage === "confirmed");
+		const job = await waitFor(queue, (value) => value?.stage === "ready");
 
 		expect(job.retry).toBe(1);
 		expect(pinImage).toHaveBeenCalledTimes(2);
+		await queue.mint("job-1");
 		queue.close();
 	});
 

@@ -253,7 +253,7 @@ npm run dev -w @graffiti/web-gallery    # http://localhost:5174
 VITE_RPC_URL=http://localhost:8545 VITE_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3 VITE_IPFS_GATEWAY=http://localhost:8080/ipfs/ npm run dev -w @graffiti/web-verify -- --port 5175
 ~~~
 
-Draw and submit from the kiosk. Gallery displays approved work only; use the authenticated admin API in [docs/api.md](./docs/api.md) to moderate. The `web-admin` directory currently has no runnable UI.
+Draw and submit from the kiosk. After IPFS preparation, mint the submission from the authenticated admin queue; a confirmed mint is published to the gallery automatically.
 
 To mint from a PNG file, use `npm run mint:test -- ./test-image.png "CyberNinja"` with the backend running. A successful run prints a token ID and `✅ VERIFIED`.
 
@@ -300,12 +300,13 @@ Base: `http://localhost:3001`
 | Method | Endpoint | Purpose |
 |--------|----------|---------|
 | POST | `/api/artworks` | Submit PNG + nickname + client hash → creates job |
-| GET | `/api/artworks/:id/status` | Job stage: `hashing / uploading / minting / confirmed / failed` |
+| GET | `/api/artworks/:id/status` | Job stage: `hashing / uploading / ready / minting / confirmed / failed` |
 | GET | `/api/gallery?status=approved` | Gallery list (paginated) |
 | GET | `/api/health` | Chain/IPFS readiness, queue depth, and balance |
-| POST | `/api/admin/artworks/:id/approve` | Moderation approve |
+| POST | `/api/admin/artworks/:id/mint` | Mint prepared artwork and publish it after chain confirmation |
 | POST | `/api/admin/artworks/:id/hide` | Hide from wall |
-| PUT | `/api/admin/config` | Moderation mode, kill switch, IPFS provider |
+| POST | `/api/admin/artworks/:id/retry-ipfs` | Retry failed IPFS preparation |
+| PUT | `/api/admin/config` | Kill switch and IPFS provider |
 | POST | `/api/votes` | Cast vote (deduplicated by artwork/category/voter key) |
 | GET | `/api/leaderboard` | Tallies |
 | POST | `/api/admin/reset` | Archive day's data |
@@ -327,7 +328,7 @@ Key invariants:
 - Server **recomputes SHA-256** from received bytes, rejects mismatch (400).
 - Size cap ≤ 500 KB, PNG only, artwork submission rate-limited per device/IP.
 - Mint via in-memory queue with up to three retries; never expose `MINTER_PRIVATE_KEY`. Accepted job progress is lost if the backend process restarts.
-- The running backend uses `display_after_approve`: it mints first, stores the artwork as `minted`, and requires admin approval before gallery display. The config route stores `MODERATION_MODE`, but `mint_after_approve` is not wired into queue processing yet.
+- Kiosk submission pins the image and metadata first. The admin queue then exposes a single **Mint NFT** action; after the chain confirms, the artwork is published to the gallery automatically.
 
 Full spec → [`backend/AGENT.md`](./backend/AGENT.md) + [`docs/api.md`](./docs/api.md).
 
@@ -373,7 +374,7 @@ Honesty note: tampering doesn't alter the chain — it **breaks verification**. 
 
 Why: public screen + permanent NFTs = offensive-art risk is **high impact**.
 
-- New art → **staff approval screen** before wall. Mint immediately but display only `approved`, or mint after approval (configurable).
+- New art → staff mints the IPFS-prepared submission from the admin queue; successful chain confirmation publishes it to the wall. Staff can still hide minted work.
 - **Hide button** (< 2 clicks), nickname profanity filter, size cap, rate-limit, admin kill switch (`KILL_SWITCH=true` stops new mints, gallery stays up).
 - Claim/transfer is opt-in after event so club wallet stays the on-chain creator during expo, with nickname in metadata + event.
 
@@ -397,7 +398,6 @@ IPFS_GATEWAY=https://gateway.pinata.cloud/ipfs/
 # Backend
 PORT=3001
 DATABASE_URL=file:./data.db
-MODERATION_MODE=display_after_approve  # or mint_after_approve
 MAX_IMAGE_KB=500
 RATE_LIMIT_PER_MIN=5
 KILL_SWITCH=false

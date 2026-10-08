@@ -34,9 +34,11 @@ JSON body: `{ "artworkId": string, "category": string, "voterKey": string }`. A 
 
 ## Admin (Bearer `ADMIN_TOKEN`)
 
-- `POST /api/admin/artworks/:jobId/approve` → `{ item: GalleryItem }`; changes the artwork to `approved` and emits gallery `new`.
+- `POST /api/admin/artworks/:jobId/mint` → `{ item: GalleryItem, job: MintJob }`; submits a prepared artwork to the chain, marks it `approved` after receipt, and emits gallery `new`.
+- `POST /api/admin/artworks/:jobId/retry-ipfs` → `{ job: MintJob }`; retries failed IPFS preparation while the backend still has the uploaded bytes.
+- `POST /api/admin/artworks/:jobId/restore` → `{ item: GalleryItem }`; republishes an already minted hidden artwork.
 - `POST /api/admin/artworks/:jobId/hide` → `{ item: GalleryItem }`; changes it to `hidden` and emits gallery `hide` (`{ id }`).
-- `PUT /api/admin/config` → current config. JSON may include `MODERATION_MODE` (`display_after_approve | mint_after_approve`), `KILL_SWITCH` (boolean), and/or `IPFS_PROVIDER` (`pinata | kubo`). The current backend bootstrap always runs queue processing as `display_after_approve`; setting `mint_after_approve` is stored but does not change the mint flow yet.
+- `PUT /api/admin/config` → current config. JSON may include `KILL_SWITCH` (boolean) and/or `IPFS_PROVIDER` (`pinata | kubo`). Legacy `MODERATION_MODE` values remain accepted for existing deployments but no longer change the mint flow.
 - `POST /api/admin/reset` with `{ "confirm": "ARCHIVE YYYY-MM-DD" }` for **today's UTC date** → `{ ok, archiveId, artworkCount, voteCount }`. The route archives all current artwork and votes; wrong confirmation is rejected.
 
 Unauthenticated admin requests return `401`. The kill switch blocks new artwork submissions; reads and the gallery remain available.
@@ -54,4 +56,4 @@ Connect to the backend origin using Socket.IO:
 - Namespace `/gallery`: server emits `new` with an approved `GalleryItem`; emits `hide` with `{ id }`.
 - Namespace `/status`: client emits `subscribe` with a `jobId`; server emits `job` with that job's `MintJob` updates.
 
-Subscriptions are not authorization and updates are not replayed to late subscribers. Reconnect, subscribe again, and poll `GET /api/artworks/:jobId/status` to recover current state. Browser origins are controlled by `CORS_ORIGIN`.
+Subscriptions are not authorization and updates are not replayed to late subscribers. The job progresses through hashing, uploading, ready, minting, and confirmed (or failed). Reconnect, subscribe again, and poll `GET /api/artworks/:jobId/status` to recover current state. Browser origins are controlled by `CORS_ORIGIN`.

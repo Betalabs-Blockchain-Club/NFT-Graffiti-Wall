@@ -20,6 +20,10 @@ export type DrawingCanvasHandle = {
 
 type Point = { x: number; y: number };
 
+interface DrawingCanvasProps {
+  onTimeUp?: () => void | Promise<void>;
+}
+
 function snapshot(canvas: HTMLCanvasElement): string {
   return canvas.toDataURL("image/png");
 }
@@ -42,7 +46,7 @@ function restore(canvas: HTMLCanvasElement, dataUrl: string): Promise<void> {
   });
 }
 
-export const DrawingCanvas = forwardRef<DrawingCanvasHandle>(function DrawingCanvas(_props, ref) {
+export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(function DrawingCanvas({ onTimeUp }, ref) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef(-1);
@@ -54,6 +58,7 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle>(function DrawingCan
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [seconds, setSeconds] = useState(STARTING_SECONDS);
   const [hasStarted, setHasStarted] = useState(false);
+  const timeUpHandledRef = useRef(false);
 
   const recordHistory = () => {
     const canvas = canvasRef.current;
@@ -82,6 +87,12 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle>(function DrawingCan
     const timer = window.setInterval(() => setSeconds((value) => Math.max(0, value - 1)), 1000);
     return () => window.clearInterval(timer);
   }, [hasStarted, seconds]);
+
+  useEffect(() => {
+    if (!hasStarted || seconds !== 0 || timeUpHandledRef.current) return;
+    timeUpHandledRef.current = true;
+    void onTimeUp?.();
+  }, [hasStarted, seconds, onTimeUp]);
 
   useImperativeHandle(ref, () => ({
     async exportArtwork() {

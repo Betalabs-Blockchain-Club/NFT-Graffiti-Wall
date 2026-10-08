@@ -12,4 +12,4 @@ export interface GalleryItem {
   createdAt: string;
 }
 
-export type QueueStatus = "pending" | "minted" | "hidden";
+export type QueueStatus = "pending" | "approved" | "minted" | "hidden";

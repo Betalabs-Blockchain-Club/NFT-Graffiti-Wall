@@ -98,7 +98,7 @@ export function useMintJob(artwork: ArtworkExport | undefined, nickname: string 
   }, [artwork?.clientHash, job.stage, submit]);
 
   useEffect(() => {
-    if (!artwork || !jobIdRef.current || job.stage === "confirmed" || job.stage === "failed") return;
+    if (!artwork || !jobIdRef.current || job.stage === "confirmed") return;
     const jobId = jobIdRef.current;
     let active = true;
     const socket = io(`${kioskConfig.wsUrl.replace(/\/+$/, "")}/status`, {
