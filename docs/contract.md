@@ -12,7 +12,7 @@
 - `create-wallets.ts` — generates a minter wallet + a spare, offline, and prints both private keys once. Run it, copy the keys into a password manager immediately, then put `MINTER_PRIVATE_KEY` in the local `.env` (never commit it). Deploying with the minter key as the deployer account auto-grants it `MINTER_ROLE` (see the constructor).
 - `verify-roundtrip.ts` — mints one artwork on `--network <name>` using that network's `deployments/<name>.json`, then calls `verify()` with the correct hash (expect `true`) and a tampered hash (expect `false`). Proves the deployment record is usable by a plain `ethers` client, independent of this Hardhat project.
 
-## Local (localhost) — done, verified
+## Local (localhost) — verified
 
 ```
 npx hardhat node
@@ -20,14 +20,14 @@ npx hardhat run scripts/deploy.ts --network localhost
 npx hardhat run scripts/verify-roundtrip.ts --network localhost
 ```
 
-Round-trip passes. Gas for `mint()` on a fresh token: **~249,304 gas** (measured on localhost Hardhat EVM — re-measure once minted on an actual testnet, gas can differ slightly by EVM config). Budget ~200 mints at the event; pre-fund the minter wallet days early.
+The local `verify-roundtrip.ts` check mints one token and confirms a correct hash returns `true` while a tampered hash returns `false`. The tracked `deployments/localhost.json` address is for the default Hardhat node only; the node resets on restart, so deploy again before using it. Gas for `mint()` on a fresh token: **~249,304 gas** (measured on localhost Hardhat EVM; re-measure on a testnet because EVM configuration can change gas use).
 
-## base-sepolia — blocked, not deployed
+## base-sepolia — not yet deployed
 
-Deploying to `base-sepolia` and committing `deployments/base-sepolia.json` needs a **funded** minter wallet, which needs two things only a human can do:
+This checkout has no `deployments/base-sepolia.json` and no testnet contract address. A Base Sepolia deployment needs a funded deployer/minter wallet. The backend also needs an IPFS provider credential if using Pinata; that credential is not needed to deploy the contract.
 
-1. Run `npx hardhat run scripts/create-wallets.ts` to generate a minter + spare keypair, then fund both from a Base Sepolia faucet (e.g. https://www.alchemy.com/faucets/base-sepolia) — faucets rate-limit, so do this first.
-2. Create a Pinata account and JWT (`PINATA_JWT`) — needed by the backend, not by this deploy step, but gather it at the same time since it's also a manual sign-up.
+1. Run `npx hardhat run scripts/create-wallets.ts` to generate a minter + spare keypair, then fund the deployer/minter from a Base Sepolia faucet (for example, Alchemy's Base Sepolia faucet). Keep the spare key offline.
+2. Configure the network RPC and funded `MINTER_PRIVATE_KEY` in the local `.env`.
 
 Once `MINTER_PRIVATE_KEY` in `.env` is funded:
 
@@ -37,6 +37,6 @@ npx hardhat run scripts/verify-roundtrip.ts --network base-sepolia
 npx hardhat verify --network base-sepolia <address>
 ```
 
-Then update this file with the real address + explorer link, and commit `deployments/base-sepolia.json`.
+After a successful deploy and round-trip, record the real address, block, ABI, and explorer link here; commit `deployments/base-sepolia.json`.
 
 **Explorer verify:** `npx hardhat verify --network base-sepolia <address>`

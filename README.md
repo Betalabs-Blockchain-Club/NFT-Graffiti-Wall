@@ -81,37 +81,25 @@ Draw artwork → Hash it → Pin to IPFS → Mint NFT → Tx confirmed
 
 ## 3. Architecture
 
-```text
-┌───────────────────────┐        ┌──────────────────────────────┐
-│ Draw Kiosk (React)    │  REST  │ Backend API (Node/Express)   │
-│ Canvas → PNG → SHA256 │◄──────►│ - validation, rate-limit     │
-└───────────────────────┘        │ - moderation state           │
-                                 │ - IPFS pinning               │
-┌───────────────────────┐   WS   │ - holds MINTER key (server)  │
-│ Gallery Wall (React)  │◄──────►│ - mint queue + retry         │
-│ TV / projector        │        │ - SQLite/Postgres            │
-└───────────────────────┘        └───────┬───────────┬──────────┘
-                                         │           │
-┌───────────────────────┐                ▼           ▼
-│ Admin Panel (React)   │        ┌──────────────┐ ┌──────────────┐
-│ approve / hide / reset│        │ IPFS (Pinata │ │ EVM chain    │
-└───────────────────────┘        │ / local Kubo)│ │ ERC-721      │
-                                 └──────────────┘ │ (L2 testnet) │
-┌───────────────────────┐                         └──────┬───────┘
-│ Verify Page (public)  │◄───────────────────────────────┘
-│ static site, reads    │   reads tokenURI + hash via public RPC
-│ chain + IPFS gateway  │
-└───────────────────────┘
-```
+~~~text
+Kiosk ── PNG + SHA-256 ──► Backend ──► IPFS (image + metadata)
+                              │  └────► EVM chain (ERC-721 proof)
+Gallery ◄── REST + Socket.IO ┘
+Admin API ── authenticated moderation/config ──► Backend
 
+Visitor phone ── QR ──► Static verify page ──► EVM chain + IPFS gateway
+~~~
+
+See [docs/architecture.md](./docs/architecture.md) for data flow, trust boundaries, and failure behavior.
 Design principles:
 
 - **Server holds minter key** — visitors never need a wallet.
 - **Artwork on IPFS, proof on chain** — `CID + hash + nickname + timestamp`.
 - **Verify page is static + trustless** — recomputes hash in browser, compares to on-chain value. No trust in backend.
-- **Gallery reads DB cache** for speed, subscribes to `ArtworkMinted` events for authenticity.
+- **Gallery reads the SQLite cache** for speed; approved/hide changes are pushed over Socket.IO.
 - **Hash exact bytes** uploaded to IPFS. Client pre-computes, server recomputes and rejects mismatches. Never re-encode between hashing and upload.
-- **Queue everything** — mint jobs with retry/backoff so visitors never wait on a failed RPC/IPFS call.
+- **Retry transient failures** — the current queue is in memory and retries IPFS/chain calls up to three times; it is not a durable offline job store.
+- **Admin interface status** — authenticated moderation/config API routes exist; the `web-admin` UI is not implemented yet.
 
 Folder → service mapping:
 
@@ -122,7 +110,7 @@ Folder → service mapping:
 | `web-kiosk/` | Draw + mint UX | backend REST + WS |
 | `web-gallery/` | Live wall TV | backend REST + WS |
 | `web-verify/` | Public verification | chain RPC + IPFS gateway directly |
-| `web-admin/` | Moderation | backend admin API |
+| `web-admin/` | Planned moderation UI (not implemented) | backend admin API |
 | `shared/` | Hash/canvas/api/types | all frontends + backend |
 | `docs/`, `scripts/`, `infra/` | Ops knowledge | humans + CI |
 
@@ -141,11 +129,11 @@ See root [`AGENT.md`](./AGENT.md) for agent boundaries, and each folder's `AGENT
 | Contract | Solidity 0.8.x, OpenZeppelin ERC721URIStorage + AccessControl | Audited standard |
 | Dev tooling | Hardhat + TypeChain | Tests, deploys, typed bindings |
 | Chain client | ethers.js v6 | Contract calls + events |
-| Network | Sepolia or L2 testnet (Base Sepolia / Polygon Amoy / Arbitrum Sepolia); local Hardhat fallback | Public verifiable + cheap/fast; offline fallback |
-| IPFS | Pinata (primary), local Kubo (fallback) | Reliable pinning + offline mode |
-| Backend | Node + Express | Mint queue, moderation, IPFS proxy, WS |
+| Network | Base Sepolia or Sepolia; local Hardhat fallback | Public verification or local development |
+| IPFS | Pinata or local Kubo, with alternate-provider retry | Content-addressed storage |
+| Backend | Node + Express | Mint queue, moderation API, IPFS pinning, WS |
 | Realtime | Socket.IO / WS | Push to wall + kiosk progress |
-| DB | SQLite (dev/expo) → Postgres (optional) | Artworks, votes, config |
+| DB | SQLite | Artwork and moderation cache, votes, config |
 | QR | `qrcode` / `qrcode.react` | Links to `verify.<domain>/#/token/37` |
 | Hosting | Verify + gallery static on Vercel/Netlify; backend on expo laptop or VPS | Public verification, local control |
 
@@ -189,7 +177,7 @@ NFT-Graffiti-Wall/
 ├── web-verify/                  # Public static verify + tamper demo
 │   ├── AGENT.md
 │   └── src/components|pages|lib
-├── web-admin/                   # Moderation queue, network mode, kill switch
+├── web-admin/                   # Planned moderation UI (not implemented)
 │   ├── AGENT.md
 │   └── src/components|pages
 │
@@ -217,66 +205,59 @@ NFT-Graffiti-Wall/
 
 ## 6. Quickstart
 
-### Prerequisites
+This local path uses Docker for Hardhat + Kubo + backend; Node 20+, npm 10+, and Docker Compose are required. No testnet account or Pinata account is needed.
 
-- Node 20+, npm 10+
-- A testnet RPC URL + funded minter key (or use local Hardhat)
-- Pinata JWT (or use local Kubo)
-- Docker (optional, for full local fallback)
+### 1. Clone, install, and configure
 
-### 1. Clone + install
-
-```bash
+~~~bash
 git clone <repo-url> NFT-Graffiti-Wall
 cd NFT-Graffiti-Wall
 npm install
 cp .env.example .env
-# fill in RPC_URL, MINTER_PRIVATE_KEY, PINATA_JWT, CONTRACT_ADDRESS after deploy
-```
+~~~
 
-### 2. Contract (local test)
+Edit `.env`: set `CHAIN_NETWORK=localhost`, `RPC_URL=http://localhost:8545`, `IPFS_PROVIDER=kubo`, and `KUBO_API=http://localhost:5001`. Set `MINTER_PRIVATE_KEY` to the local Hardhat-only account key below and `ADMIN_TOKEN` to a non-empty local value. Never reuse these development credentials outside a local chain.
 
-```bash
-cd contracts
-npm install
-npx hardhat test
-npx hardhat node &              # terminal 1: local chain
-npx hardhat run scripts/deploy.ts --network localhost  # terminal 2
-```
+~~~text
+Hardhat account 0 (local development only):
+0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+~~~
 
-### 3. Backend (dev)
+### 2. Start local chain and IPFS, then deploy
 
-```bash
-cd backend
-npm install
-npm run dev                     # http://localhost:3001
-# health: curl http://localhost:3001/api/health
-```
+~~~bash
+docker compose up -d hardhat kubo
+docker compose ps                  # wait until both report healthy
+docker compose exec hardhat npx hardhat run scripts/deploy.ts --network localhost
+cat contracts/deployments/localhost.json
+~~~
 
-### 4. Frontends (each in own terminal)
+Copy the deployment `address` into `.env` as `CONTRACT_ADDRESS` and `VITE_CONTRACT_ADDRESS`. Also set `VITE_RPC_URL=http://localhost:8545`, `VITE_IPFS_GATEWAY=http://localhost:8080/ipfs/`, `VITE_VERIFY_URL=http://localhost:5175`, and `DATABASE_URL=file:/app/data/data.db` (the Compose data volume is mounted at `/app/data`).
 
-```bash
-cd web-kiosk && npm install && npm run dev      # http://localhost:5173
-cd web-gallery && npm install && npm run dev    # http://localhost:5174
-cd web-verify && npm install && npm run dev     # http://localhost:5175
-cd web-admin && npm install && npm run dev      # http://localhost:5176
-```
+### 3. Start the backend and check it
 
-### 5. Full local fallback (no internet) via Docker
+~~~bash
+docker compose up --build -d backend
+curl http://localhost:3001/api/health
+~~~
 
-```bash
-docker compose up --build
-# backend :3001, hardhat :8545, kubo :5001/:8080
-```
+The response should have `ok: true`, `chain: true`, and `ipfs: true`. If configuration changes later, recreate the backend with the same Compose command.
 
-### 6. End-to-end CLI smoke test
+### 4. Run the kiosk, gallery, and verify page
 
-```bash
-npm run mint:test -- scripts/e2e-mint.js ./test-image.png "CyberNinja"
-# expects: PNG in → imageCID → metadataCID → txHash/tokenId → tokenURI resolves → ✅ VERIFIED
-```
+From the repository root, in separate terminals:
 
-Pre-mint ~10 seed artworks before opening so the wall is never empty.
+~~~bash
+npm run dev -w @graffiti/web-kiosk      # http://localhost:5173
+npm run dev -w @graffiti/web-gallery    # http://localhost:5174
+VITE_RPC_URL=http://localhost:8545 VITE_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3 VITE_IPFS_GATEWAY=http://localhost:8080/ipfs/ npm run dev -w @graffiti/web-verify -- --port 5175
+~~~
+
+Draw and submit from the kiosk. Gallery displays approved work only; use the authenticated admin API in [docs/api.md](./docs/api.md) to moderate. The `web-admin` directory currently has no runnable UI.
+
+To mint from a PNG file, use `npm run mint:test -- ./test-image.png "CyberNinja"` with the backend running. A successful run prints a token ID and `✅ VERIFIED`.
+
+Stop the stack with `docker compose down`. Named data volumes are kept unless `-v` is added.
 
 ---
 
@@ -289,7 +270,7 @@ Pre-mint ~10 seed artworks before opening so the wall is never empty.
 - `MINTER_ROLE` only (backend wallet) can `mint()`.
 - `ArtworkMinted(tokenId, creator, nickname, ipfsCID, artworkHash)` event for gallery.
 - `verify(id, candidateHash) -> bool` view.
-- Claim flow = standard `transferFrom` to visitor address.
+- Tokens support standard ERC-721 transfers; a visitor claim UI/flow is not implemented.
 
 Metadata JSON (pinned to IPFS):
 
@@ -321,9 +302,11 @@ Base: `http://localhost:3001`
 | POST | `/api/artworks` | Submit PNG + nickname + client hash → creates job |
 | GET | `/api/artworks/:id/status` | Job stage: `hashing / uploading / minting / confirmed / failed` |
 | GET | `/api/gallery?status=approved` | Gallery list (paginated) |
+| GET | `/api/health` | Chain/IPFS readiness, queue depth, and balance |
 | POST | `/api/admin/artworks/:id/approve` | Moderation approve |
 | POST | `/api/admin/artworks/:id/hide` | Hide from wall |
-| POST | `/api/votes` | Cast vote (rate-limited) |
+| PUT | `/api/admin/config` | Moderation mode, kill switch, IPFS provider |
+| POST | `/api/votes` | Cast vote (deduplicated by artwork/category/voter key) |
 | GET | `/api/leaderboard` | Tallies |
 | POST | `/api/admin/reset` | Archive day's data |
 | Socket.IO `/gallery` | `new` / `hide` | New/hidden artwork events |
@@ -336,15 +319,15 @@ artworks(id, token_id, nickname, image_cid, metadata_cid, sha256,
          tx_hash, block_number, status[pending|minted|approved|hidden|failed],
          created_at)
 votes(id, artwork_id, category, voter_key, created_at)
-config(key, value)  -- network mode, moderation on/off, limits
+config(key, value)  -- moderation mode, kill switch, IPFS provider
 ```
 
 Key invariants:
 
 - Server **recomputes SHA-256** from received bytes, rejects mismatch (400).
-- Size cap ≤ 500 KB, PNG only, rate-limit per IP/device.
-- Mint via queue with retry/backoff; never expose `MINTER_PRIVATE_KEY`.
-- Moderation: `mint immediately but display only approved` OR `mint after approval` — configurable via `config.moderation_mode`.
+- Size cap ≤ 500 KB, PNG only, artwork submission rate-limited per device/IP.
+- Mint via in-memory queue with up to three retries; never expose `MINTER_PRIVATE_KEY`. Accepted job progress is lost if the backend process restarts.
+- The running backend uses `display_after_approve`: it mints first, stores the artwork as `minted`, and requires admin approval before gallery display. The config route stores `MODERATION_MODE`, but `mint_after_approve` is not wired into queue processing yet.
 
 Full spec → [`backend/AGENT.md`](./backend/AGENT.md) + [`docs/api.md`](./docs/api.md).
 
@@ -357,7 +340,7 @@ Full spec → [`backend/AGENT.md`](./backend/AGENT.md) + [`docs/api.md`](./docs/
 | **web-kiosk** | Attract → Canvas → Nickname → Mint progress → Certificate | `DrawingCanvas`, `MintProgress`, `CertificateCard`, `useMintJob` |
 | **web-gallery** | Live grid + NEW animation + vote bars | `GalleryGrid`, `NewArtToast`, `useGallerySocket` |
 | **web-verify** | Badge + hashes + tx link + tamper button | `VerifyBadge`, `HashCompare`, `TamperCanvas` |
-| **web-admin** | Queue + hide/restore + network mode + queue health | `ModerationQueue`, `NetworkSwitch`, `QueueHealth` |
+| **web-admin** | Not implemented yet; use authenticated admin API | — |
 
 Shared code lives in `shared/` (hashing, canvas export, api-client, types, QR). No duplication of hash logic — one implementation, used everywhere.
 
@@ -407,7 +390,7 @@ RPC_URL=https://...
 CONTRACT_ADDRESS=0x...
 MINTER_PRIVATE_KEY=0x...          # BACKEND ONLY, never frontend
 # IPFS
-IPFS_PROVIDER=pinata              # pinata | kubo
+IPFS_PROVIDER=pinata              # pinata | kubo; tries the alternate provider after failure
 PINATA_JWT=...
 KUBO_API=http://localhost:5001
 IPFS_GATEWAY=https://gateway.pinata.cloud/ipfs/
@@ -418,14 +401,15 @@ MODERATION_MODE=display_after_approve  # or mint_after_approve
 MAX_IMAGE_KB=500
 RATE_LIMIT_PER_MIN=5
 KILL_SWITCH=false
-# Frontend
+# Frontend (public values only)
 VITE_API_URL=http://localhost:3001
+VITE_WS_URL=http://localhost:3001
 VITE_VERIFY_URL=https://verify.example.com
 VITE_CONTRACT_ADDRESS=0x...
 VITE_RPC_URL=https://...
 ```
 
-Test-ETH: fund minter wallet **days early** (~200 mints is cheap on L2). Keep spare faucet accounts. Admin panel shows balance monitor.
+For testnet use, fund the minter wallet before the event and configure the real deployed address, RPC, and IPFS credentials. The admin API exposes the current balance through `/api/health`; there is no admin panel UI yet.
 
 ---
 
@@ -445,7 +429,7 @@ Booth layout:
 
 Boot checklist (every morning): balance check → contract reachable → IPFS key valid → test mint → test verify **from a phone** on cellular (not expo Wi-Fi).
 
-Staff roles: greeter, moderator (admin panel), explainer. Archive/export nightly. Record a fallback demo video. Bring hotspot backup, power strips, spare HDMI, optional printer for paper certificates (big hit), posters + QR-to-gallery sign.
+Staff roles: greeter, moderator (use an authenticated client for the admin API), explainer. Archive/export nightly. Record a fallback demo video. Bring hotspot backup, power strips, spare HDMI, optional printer for paper certificates (big hit), posters + QR-to-gallery sign.
 
 Failure drills before event: IPFS down, RPC down, wallet out of gas, Wi-Fi drop, queue buildup, offensive art. See [`docs/booth-checklist.md`](./docs/booth-checklist.md).
 
