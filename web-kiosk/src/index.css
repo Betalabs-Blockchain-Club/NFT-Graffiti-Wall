@@ -23,25 +23,26 @@ button { font: inherit; cursor: pointer; }
 .flow-step.is-active { color: #d7ff4f; }
 .flow-step.is-active span { color: #101313; background: #d7ff4f; border-color: #d7ff4f; }
 
-.attract-screen { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); align-items: center; gap: 6vw; min-height: 100vh; padding: 120px 9vw 72px; isolation: isolate; }
+.attract-screen { position: relative; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); align-items: center; gap: 5vw; min-height: 100vh; padding: clamp(36px, 5vh, 64px) 7vw clamp(28px, 4vh, 44px); isolation: isolate; }
 .attract-grid { position: absolute; inset: 0; z-index: -2; opacity: .35; background-image: linear-gradient(#27312e 1px, transparent 1px), linear-gradient(90deg, #27312e 1px, transparent 1px); background-size: 52px 52px; mask-image: linear-gradient(to right, #000, transparent 75%); }
 .attract-screen::before { content: ""; position: absolute; inset: 0; z-index: -3; background: radial-gradient(circle at 75% 48%, #345b4b 0, transparent 28%), linear-gradient(135deg, #101313 35%, #172321 100%); }
 .attract-copy { max-width: 760px; }
-.eyebrow, .stub-kicker { display: flex; align-items: center; gap: 8px; color: #d7ff4f; font: 12px "DM Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
-h1 { margin: 22px 0; max-width: 760px; font-size: clamp(4rem, 9vw, 8.6rem); line-height: .9; letter-spacing: -.06em; font-weight: 600; }
+.eyebrow, .stub-kicker { display: flex; align-items: center; gap: 8px; color: #d7ff4f; font: 13px "DM Mono", monospace; letter-spacing: .12em; text-transform: uppercase; }
+.attract-copy h1 { margin: 18px 0 22px; max-width: 760px; font-size: clamp(3.2rem, 6.8vw, 6.2rem); line-height: .92; letter-spacing: -.05em; font-weight: 700; }
+h1 { margin: 18px 0; max-width: 760px; font-size: clamp(3.2rem, 7vw, 6.5rem); line-height: .9; letter-spacing: -.06em; font-weight: 600; }
 h1 span { display: block; color: #d7ff4f; }
-.attract-lede { max-width: 520px; color: #bbc5bc; font-size: clamp(1.05rem, 1.8vw, 1.4rem); line-height: 1.5; }
-.primary-action { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 56px; margin-top: 24px; padding: 0 24px; color: #101313; border: 0; border-radius: 8px; background: #d7ff4f; font-weight: 700; }
+.attract-lede { max-width: 540px; color: #bbc5bc; font-size: clamp(1.15rem, 1.7vw, 1.4rem); line-height: 1.45; }
+.primary-action { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 54px; margin-top: 22px; padding: 0 26px; color: #101313; border: 0; border-radius: 8px; background: #d7ff4f; font-size: 1.05rem; font-weight: 700; }
 .primary-action:hover { background: #ecff9c; transform: translateY(-2px); }
-.attract-meta { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 32px; color: #85928a; font: 12px "DM Mono", monospace; text-transform: uppercase; }
+.attract-meta { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 24px; color: #85928a; font: 13px "DM Mono", monospace; text-transform: uppercase; }
 .attract-meta span { display: inline-flex; align-items: center; gap: 7px; }
-.attract-art { position: relative; aspect-ratio: 1; max-width: 520px; width: 100%; border: 1px solid #53655b; background: #1c2824; transform: rotate(3deg); box-shadow: 18px 18px 0 #d7ff4f; }
-.art-ring { position: absolute; border: 2px solid #d7ff4f; border-radius: 50%; }
-.art-ring-one { inset: 13%; border-style: dashed; animation: spin 26s linear infinite; }
-.art-ring-two { inset: 28%; border-color: #ef7c52; border-width: 12px 2px; transform: rotate(35deg); }
-.art-sticker { position: absolute; top: 18%; right: 14%; z-index: 2; padding: 13px; color: #101313; background: #ef7c52; font-size: 1.1rem; line-height: .9; font-weight: 700; transform: rotate(-12deg); }
-.art-caption { position: absolute; bottom: 13%; left: 13%; color: #d7ff4f; font: 14px "DM Mono", monospace; line-height: 1.4; letter-spacing: .1em; }
+.attract-art { position: relative; aspect-ratio: 1; max-width: 520px; width: 100%; border: 1px solid #53655b; background: #1c2824; transform: rotate(3deg); box-shadow: 18px 18px 0 #d7ff4f; overflow: hidden; border-radius: 4px; }
+.live-artboard-label { position: absolute; top: 14px; right: 14px; z-index: 5; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; color: #f4f1e8; background: rgba(16, 19, 19, 0.85); border: 1px solid rgba(215, 255, 79, 0.4); border-radius: 20px; font: 10px "DM Mono", monospace; letter-spacing: 0.12em; text-transform: uppercase; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: #d7ff4f; box-shadow: 0 0 8px #d7ff4f; animation: live-pulse 2s infinite; }
+.art-svg { width: 100%; height: 100%; display: block; }
+.art-caption { position: absolute; bottom: 12px; left: 14px; z-index: 5; color: #d7ff4f; font: 12px "DM Mono", monospace; line-height: 1.3; letter-spacing: .08em; background: rgba(16, 19, 19, 0.75); padding: 6px 10px; border-radius: 4px; backdrop-filter: blur(4px); }
 .art-caption strong { color: #f4f1e8; }
+@keyframes live-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.85); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .stub-screen { display: grid; place-items: center; min-height: 100vh; padding: 120px 24px 48px; background: radial-gradient(circle at 50% 35%, #263a32, #101313 55%); }
@@ -147,9 +148,10 @@ h1 span { display: block; color: #d7ff4f; }
   .flow-steps { gap: 4px; font-size: 0; }
   .flow-step span { width: 28px; height: 28px; }
   .reset-button { min-height: 42px; padding: 0 10px; font-size: 12px; }
-  .attract-screen { display: block; padding: 110px 24px 48px; }
-  h1 { font-size: clamp(3.8rem, 18vw, 6rem); }
-  .attract-art { width: 72%; margin: 58px auto 0; box-shadow: 10px 10px 0 #d7ff4f; }
+  .attract-screen { display: block; padding: 36px 20px 32px; }
+  .attract-copy h1 { font-size: clamp(2.8rem, 12vw, 4.2rem); }
+  h1 { font-size: clamp(3rem, 14vw, 5rem); }
+  .attract-art { width: 85%; max-width: 320px; margin: 32px auto 0; box-shadow: 10px 10px 0 #d7ff4f; }
   .attract-meta { gap: 12px; }
   .draw-screen { padding: 98px 16px 32px; }
   .draw-heading { align-items: start; flex-direction: column; }

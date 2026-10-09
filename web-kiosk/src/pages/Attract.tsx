@@ -8,7 +8,6 @@ export function Attract({ onStart }: AttractProps) {
   return (
     <main className="attract-screen">
       <div className="attract-grid" aria-hidden="true" />
-      <img className="attract-logo" src="/logo.png" alt="NFT Graffiti Wall" />
       <div className="attract-copy">
         <motion.div
           className="eyebrow"
@@ -50,10 +49,14 @@ export function Attract({ onStart }: AttractProps) {
         </div>
       </div>
       <div className="attract-art" aria-hidden="true">
-        <div className="art-sticker">DRAW<br />HERE</div>
-        <div className="art-ring art-ring-one" />
-        <div className="art-ring art-ring-two" />
-        <div className="art-caption">YOUR TAG<br /><strong>YOUR PROOF</strong></div>
+        <div className="live-artboard-label">
+          <span className="live-dot" /> LIVE ARTBOARD
+        </div>
+        <img className="art-image" src="/Graffiti.png" alt="Graffiti Artwork" />
+        <div className="art-caption">
+          YOUR TAG<br />
+          <strong>YOUR PROOF</strong>
+        </div>
       </div>
     </main>
   );

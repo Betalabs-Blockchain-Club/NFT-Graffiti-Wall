@@ -183,7 +183,7 @@ if (import.meta.vitest) {
     attributes: [
       { trait_type: "Creator", value: "Pixel Fox" },
       { trait_type: "SHA-256", value: createHash("sha256").update(png).digest("hex") },
-      { trait_type: "Event", value: "TechFest 2026" }
+      { trait_type: "Event", value: "AAROH 2026" }
     ]
   });
   const pinataResponse = (value = cid) => Response.json({ IpfsHash: value });

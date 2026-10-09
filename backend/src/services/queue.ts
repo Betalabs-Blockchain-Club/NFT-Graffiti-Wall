@@ -78,7 +78,7 @@ export function createMintQueue(options: QueueOptions) {
 					attributes: [
 						{ trait_type: "Creator", value: input.nickname },
 						{ trait_type: "SHA-256", value: bytesHash },
-						{ trait_type: "Event", value: "TechFest 2026" }
+						{ trait_type: "Event", value: "AAROH 2026" }
 					]
 				});
 				if (cancelled.has(input.jobId)) return;
