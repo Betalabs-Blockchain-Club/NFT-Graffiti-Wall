@@ -3,6 +3,7 @@ import { ArrowRight, ChevronLeft, Sparkles } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { validateNickname } from "@graffiti/shared/nickname";
 import type { ArtworkExport } from "../components/DrawingCanvas/DrawingCanvas";
+import { loadKioskSession, saveKioskSession, useRestoredArtwork } from "../hooks/useKioskSession";
 
 type NicknameLocationState = { artwork?: ArtworkExport };
 function newSubmissionId() {
@@ -18,8 +19,8 @@ function validationMessage(reason: "empty" | "too_long" | "profanity") {
 export function Nickname() {
   const navigate = useNavigate();
   const location = useLocation();
-  const artwork = (location.state as NicknameLocationState | null)?.artwork;
-  const [nickname, setNickname] = useState("");
+  const artwork = useRestoredArtwork((location.state as NicknameLocationState | null)?.artwork);
+  const [nickname, setNickname] = useState(() => loadKioskSession().nickname ?? "");
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
@@ -54,7 +55,9 @@ export function Nickname() {
     if (!validation.ok || submittingRef.current) return;
     submittingRef.current = true;
     setSubmitting(true);
-    navigate("/progress", { state: { artwork, nickname: validation.value, submissionId: newSubmissionId() } });
+    const submissionId = loadKioskSession().submissionId ?? newSubmissionId();
+    saveKioskSession({ nickname: validation.value, submissionId });
+    navigate("/progress", { state: { artwork, nickname: validation.value, submissionId } });
   };
 
   return (
@@ -76,7 +79,10 @@ export function Nickname() {
                 id="nickname"
                 name="nickname"
                 value={nickname}
-                onChange={(event) => setNickname(event.target.value)}
+                onChange={(event) => {
+                  setNickname(event.target.value);
+                  saveKioskSession({ nickname: event.target.value });
+                }}
                 onBlur={() => setTouched(true)}
                 maxLength={32}
                 autoComplete="off"

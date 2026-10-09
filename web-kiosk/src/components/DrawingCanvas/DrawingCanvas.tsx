@@ -2,6 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "re
 import { blobToBytes, exportPNG } from "@graffiti/shared/canvas";
 import { sha256Bytes } from "@graffiti/shared/hashing";
 import { Eraser, Minus, Paintbrush, Plus, Redo2, RotateCcw, Undo2 } from "lucide-react";
+import { loadDrawingDraft, saveDrawingDraft } from "../../hooks/useKioskSession";
 
 const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 760;
@@ -47,27 +48,36 @@ function restore(canvas: HTMLCanvasElement, dataUrl: string): Promise<void> {
 }
 
 export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>(function DrawingCanvas({ onTimeUp }, ref) {
+  const [draft] = useState(loadDrawingDraft);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef(-1);
+  const draftImageRef = useRef(draft?.dataUrl);
   const drawingRef = useRef(false);
   const previousPointRef = useRef<Point | null>(null);
-  const [color, setColor] = useState("#101313");
-  const [brushSize, setBrushSize] = useState(18);
-  const [tool, setTool] = useState<"brush" | "eraser">("brush");
+  const [color, setColor] = useState(draft?.color ?? "#101313");
+  const [brushSize, setBrushSize] = useState(draft?.brushSize ?? 18);
+  const [tool, setTool] = useState<"brush" | "eraser">(draft?.tool ?? "brush");
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [seconds, setSeconds] = useState(STARTING_SECONDS);
-  const [hasStarted, setHasStarted] = useState(false);
-  const timeUpHandledRef = useRef(false);
+  const [seconds, setSeconds] = useState(draft?.seconds ?? STARTING_SECONDS);
+  const [hasStarted, setHasStarted] = useState(draft?.hasStarted ?? false);
+  const timeUpHandledRef = useRef(draft?.hasStarted === true && draft.seconds === 0);
+
+  const persistDraft = (dataUrl = draftImageRef.current, saveImage = true) => {
+    saveDrawingDraft({ dataUrl, seconds, hasStarted, color, brushSize, tool }, saveImage);
+  };
 
   const recordHistory = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const next = historyRef.current.slice(0, historyIndexRef.current + 1);
-    next.push(snapshot(canvas));
+    const nextSnapshot = snapshot(canvas);
+    next.push(nextSnapshot);
     if (next.length > 20) next.shift();
     historyRef.current = next;
     historyIndexRef.current = next.length - 1;
+    draftImageRef.current = nextSnapshot;
+    persistDraft(nextSnapshot);
     setHistoryIndex(historyIndexRef.current);
   };
 
@@ -77,10 +87,23 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     const context = canvas.getContext("2d");
     if (!context) return;
     context.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    historyRef.current = [snapshot(canvas)];
-    historyIndexRef.current = 0;
-    setHistoryIndex(0);
+    const initialize = async () => {
+      if (draft?.dataUrl) {
+        try { await restore(canvas, draft.dataUrl); } catch { /* Start with a blank canvas if the saved image is invalid. */ }
+      }
+      const current = snapshot(canvas);
+      draftImageRef.current = current;
+      historyRef.current = [current];
+      historyIndexRef.current = 0;
+      setHistoryIndex(0);
+      persistDraft(current);
+    };
+    void initialize();
   }, []);
+
+  useEffect(() => {
+    persistDraft(draftImageRef.current, false);
+  }, [seconds, hasStarted, color, brushSize, tool]);
 
   useEffect(() => {
     if (!hasStarted || seconds === 0) return;
@@ -156,6 +179,8 @@ export const DrawingCanvas = forwardRef<DrawingCanvasHandle, DrawingCanvasProps>
     if (!canvas || !nextSnapshot) return;
     await restore(canvas, nextSnapshot);
     historyIndexRef.current = nextIndex;
+    draftImageRef.current = nextSnapshot;
+    persistDraft(nextSnapshot);
     setHistoryIndex(nextIndex);
   };
 

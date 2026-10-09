@@ -59,7 +59,21 @@ export function createArtworksRouter({ storage, queue, maxImageKb, rateLimitPerM
   router.get("/:jobId/status", async (req, res) => {
     const job = queue.getStatus(req.params.jobId);
     if (job) return res.json(job);
-    if (!await storage.getById(req.params.jobId)) return res.status(404).json({ code: "not_found", message: "Mint job not found" });
+    const artwork = await storage.getById(req.params.jobId);
+    if (!artwork) return res.status(404).json({ code: "not_found", message: "Mint job not found" });
+    // Queue state is intentionally in memory. A completed receipt is durable in
+    // storage, so clients can still recover confirmed progress after a restart.
+    if (artwork.tokenId !== null && artwork.tokenId !== undefined && artwork.txHash && artwork.imageCID && artwork.metadataCID) {
+      return res.json({
+        jobId: artwork.id,
+        stage: "confirmed",
+        tokenId: artwork.tokenId,
+        txHash: artwork.txHash,
+        imageCID: artwork.imageCID,
+        metadataCID: artwork.metadataCID,
+        retry: 0,
+      });
+    }
     return res.status(404).json({ code: "not_found", message: "Mint job status is unavailable" });
   });
   return router;

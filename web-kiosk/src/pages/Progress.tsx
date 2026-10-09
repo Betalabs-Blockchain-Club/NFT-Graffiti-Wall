@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import type { ArtworkExport } from "../components/DrawingCanvas/DrawingCanvas";
 import { MintProgress } from "../components/MintProgress/MintProgress";
 import { useMintJob } from "../hooks/useMintJob";
+import { loadKioskSession, saveKioskSession, useRestoredArtwork } from "../hooks/useKioskSession";
 
 type ProgressLocationState = { artwork?: ArtworkExport; nickname?: string; submissionId?: string };
 
@@ -11,16 +12,29 @@ export function Progress() {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as ProgressLocationState | null;
-  const artwork = state?.artwork;
-  const nickname = state?.nickname;
-  const controller = useMintJob(artwork, nickname, state?.submissionId);
+  const artwork = useRestoredArtwork(state?.artwork);
+  const session = loadKioskSession();
+  const nickname = state?.nickname ?? session.nickname;
+  const submissionId = state?.submissionId ?? session.submissionId;
+  const routeJobId = new URLSearchParams(location.search).get("jobId") ?? undefined;
+  const savedJobId = session.jobId ?? routeJobId;
+  const restoredJob = savedJobId ? { jobId: savedJobId, hash: artwork?.clientHash ?? "", retry: 0 } : undefined;
+  const controller = useMintJob(artwork, nickname, submissionId, restoredJob);
   const { job } = controller;
 
   useEffect(() => {
-    if (artwork && nickname) void controller.submit();
-  }, [artwork, controller.submit, nickname]);
+    if (artwork && nickname && !job.jobId) void controller.submit();
+  }, [artwork, controller.submit, job.jobId, nickname]);
 
-  if (!artwork || !nickname) {
+  useEffect(() => {
+    if (!job.jobId || new URLSearchParams(location.search).get("jobId") === job.jobId) return;
+    const params = new URLSearchParams(location.search);
+    params.set("jobId", job.jobId);
+    saveKioskSession({ jobId: job.jobId });
+    navigate({ pathname: location.pathname, search: params.toString() }, { replace: true, state: location.state });
+  }, [job.jobId, location.pathname, location.search, location.state, navigate]);
+
+  if ((!artwork || !nickname) && !job.jobId) {
     return (
       <main className="stub-screen">
         <div className="stub-panel">
@@ -36,10 +50,13 @@ export function Progress() {
   return (
     <main className="progress-screen">
       <MintProgress
-        nickname={nickname}
+        nickname={nickname ?? "your artwork"}
         job={job}
         isConnected={controller.isConnected}
-        onContinue={() => navigate("/certificate", { state: { artwork, nickname, job } })}
+        canContinue={Boolean(artwork && nickname)}
+        onContinue={() => {
+          if (artwork && nickname) navigate("/certificate", { state: { artwork, nickname, job } });
+        }}
       />
     </main>
   );

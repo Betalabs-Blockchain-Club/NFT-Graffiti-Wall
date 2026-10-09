@@ -15,10 +15,11 @@ type MintProgressProps = {
   nickname: string;
   job: MintJobState;
   isConnected: boolean;
+  canContinue?: boolean;
   onContinue: () => void;
 };
 
-export function MintProgress({ nickname, job, isConnected, onContinue }: MintProgressProps) {
+export function MintProgress({ nickname, job, isConnected, canContinue = true, onContinue }: MintProgressProps) {
   const failed = job.stage === "failed" || Boolean(job.error);
   const activeIndex = job.stage ? stages.indexOf(job.stage as typeof stages[number]) : -1;
   const percent = failed ? 100 : job.stage === "confirmed" ? 100 : Math.max(8, ((activeIndex + 0.5) / stages.length) * 100);
@@ -61,8 +62,10 @@ export function MintProgress({ nickname, job, isConnected, onContinue }: MintPro
       </div>
       {failed ? (
         <div className="connection-note">Please ask a staff member to retry this artwork from the admin queue.</div>
-      ) : job.stage === "confirmed" ? (
+      ) : job.stage === "confirmed" && canContinue ? (
         <button className="primary-action" onClick={onContinue}>Continue <Check size={20} /></button>
+      ) : job.stage === "confirmed" ? (
+        <div className="connection-note">Your mint is confirmed. Start a new drawing to continue.</div>
       ) : (
         <div className="connection-note">Waiting for confirmation from the mint queue...</div>
       )}

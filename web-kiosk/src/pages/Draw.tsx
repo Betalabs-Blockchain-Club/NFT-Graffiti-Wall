@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { ArrowRight, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { DrawingCanvas, type ArtworkExport, type DrawingCanvasHandle } from "../components/DrawingCanvas/DrawingCanvas";
+import { clearKioskSession, saveArtwork } from "../hooks/useKioskSession";
 
 export function Draw() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export function Draw() {
     setExporting(true);
     try {
       const artwork: ArtworkExport = await canvasRef.current.exportArtwork();
+      await saveArtwork(artwork);
       navigate("/nickname", { state: { artwork } });
     } catch (exportError) {
       setError(exportError instanceof Error ? exportError.message : "Could not export this drawing");
@@ -30,7 +32,7 @@ export function Draw() {
           <div className="stub-kicker">01 / make your mark</div>
           <h1>Draw something<br /><span>unmistakably yours.</span></h1>
         </div>
-        <button className="back-button" onClick={() => navigate("/")}><ChevronLeft size={20} /> Start over</button>
+        <button className="back-button" onClick={() => { clearKioskSession(); navigate("/"); }}><ChevronLeft size={20} /> Start over</button>
       </div>
       <DrawingCanvas ref={canvasRef} onTimeUp={() => void continueToNickname()} />
       {error && <p className="drawing-error" role="alert">{error}</p>}

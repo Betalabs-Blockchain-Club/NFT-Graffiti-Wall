@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import { GalleryItem } from "../types";
 import { LikeButton } from "./LikeButton";
@@ -9,10 +9,18 @@ interface GalleryGridProps {
   items: GalleryItem[];
   likesAvailable: boolean;
   onLikeToggle: (artworkId: string, liked: boolean) => Promise<void>;
+  selectedArtworkId: string | null;
+  onSelectedArtworkChange: (artworkId: string | null) => void;
 }
 
-export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, likesAvailable, onLikeToggle }) => {
-  const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
+export const GalleryGrid: React.FC<GalleryGridProps> = ({
+  items,
+  likesAvailable,
+  onLikeToggle,
+  selectedArtworkId,
+  onSelectedArtworkChange,
+}) => {
+  const selectedItem = items.find((item) => item.id === selectedArtworkId) ?? null;
   const newestItemId = useMemo(
     () => items.reduce<GalleryItem | null>((newest, item) =>
       !newest || new Date(item.createdAt).getTime() > new Date(newest.createdAt).getTime() ? item : newest, null)?.id,
@@ -60,7 +68,7 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, likesAvailable,
             {/* Artwork Canvas Container */}
             <button
               type="button"
-              onClick={() => setSelectedItem(item)}
+              onClick={() => onSelectedArtworkChange(item.id)}
               aria-label={`Open artwork by ${item.nickname}`}
               className="relative aspect-square w-full bg-white flex items-center justify-center p-2 overflow-hidden cursor-zoom-in focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400"
             >
@@ -110,15 +118,15 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, likesAvailable,
           role="dialog"
           aria-modal="true"
           aria-label={`Artwork by ${selectedItem.nickname}`}
-          onClick={() => setSelectedItem(null)}
+          onClick={() => onSelectedArtworkChange(null)}
           onKeyDown={(event) => {
-            if (event.key === "Escape") setSelectedItem(null);
+            if (event.key === "Escape") onSelectedArtworkChange(null);
           }}
           tabIndex={-1}
         >
           <button
             type="button"
-            onClick={() => setSelectedItem(null)}
+            onClick={() => onSelectedArtworkChange(null)}
             aria-label="Close artwork viewer"
             className="absolute right-4 top-4 z-10 rounded-full border border-white/20 bg-black/60 p-3 text-white hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-pink-400"
           >

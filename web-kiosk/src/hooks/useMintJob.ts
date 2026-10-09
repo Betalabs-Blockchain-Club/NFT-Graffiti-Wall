@@ -4,6 +4,7 @@ import { ApiError, createApiClient } from "@graffiti/shared/api-client";
 import type { MintJob } from "@graffiti/shared/types";
 import type { ArtworkExport } from "../components/DrawingCanvas/DrawingCanvas";
 import { kioskConfig } from "../lib/config";
+import { saveKioskSession } from "./useKioskSession";
 
 export type MintJobState = {
   jobId?: string;
@@ -59,20 +60,27 @@ export type MintJobController = {
   retry: () => Promise<void>;
 };
 
-export function useMintJob(artwork: ArtworkExport | undefined, nickname: string | undefined, submissionId?: string): MintJobController {
+export function useMintJob(
+  artwork: ArtworkExport | undefined,
+  nickname: string | undefined,
+  submissionId?: string,
+  restoredJob?: MintJobState,
+): MintJobController {
   const client = useMemo(() => createApiClient({ baseUrl: kioskConfig.apiUrl }), []);
   const socketRef = useRef<Socket | null>(null);
-  const jobIdRef = useRef<string>();
+  const jobIdRef = useRef<string | undefined>(restoredJob?.jobId);
   const submittingRef = useRef(false);
   const fallbackSubmissionIdRef = useRef(globalThis.crypto?.randomUUID?.() ?? `submission-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const idempotencyKey = submissionId ?? fallbackSubmissionIdRef.current;
-  const [job, setJob] = useState<MintJobState>({ hash: artwork?.clientHash ?? "", retry: 0 });
+  const [job, setJob] = useState<MintJobState>(restoredJob ?? { hash: artwork?.clientHash ?? "", retry: 0 });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
 
   const applyJob = useCallback((nextJob: MintJob) => {
     jobIdRef.current = nextJob.jobId;
-    setJob(stateFromJob(nextJob, artwork?.clientHash ?? ""));
+    const nextState = stateFromJob(nextJob, artwork?.clientHash ?? "");
+    saveKioskSession({ jobId: nextJob.jobId, job: nextState });
+    setJob(nextState);
   }, [artwork?.clientHash]);
 
   const submit = useCallback(async () => {
@@ -83,7 +91,9 @@ export function useMintJob(artwork: ArtworkExport | undefined, nickname: string 
     try {
       const response = await client.submitArtwork(artwork.blob, nickname, artwork.clientHash, deviceId(), idempotencyKey);
       jobIdRef.current = response.jobId;
-      setJob({ jobId: response.jobId, stage: "hashing", hash: artwork.clientHash, retry: 0 });
+      const nextJob = { jobId: response.jobId, stage: "hashing" as const, hash: artwork.clientHash, retry: 0 };
+      saveKioskSession({ jobId: response.jobId, job: nextJob });
+      setJob(nextJob);
     } catch (error) {
       setJob({ hash: artwork.clientHash, retry: 0, error: friendlyError(error) });
     } finally {
@@ -100,9 +110,37 @@ export function useMintJob(artwork: ArtworkExport | undefined, nickname: string 
   }, [artwork?.clientHash, job.stage, submit]);
 
   useEffect(() => {
-    if (!artwork || !jobIdRef.current || job.stage === "confirmed") return;
+    if (!jobIdRef.current || job.error?.startsWith("Mint status is no longer available.")) return;
     const jobId = jobIdRef.current;
     let active = true;
+
+    const update = (nextJob: MintJob) => {
+      if (active && nextJob.jobId === jobId) applyJob(nextJob);
+    };
+    const poll = async () => {
+      try {
+        update(await client.getStatus(jobId));
+      } catch (error) {
+        // Socket updates can continue while the REST endpoint is briefly unavailable.
+        if (active && error instanceof ApiError && error.status === 404) {
+          const unavailable: MintJobState = {
+            jobId,
+            stage: "failed",
+            retry: 0,
+            hash: artwork?.clientHash ?? "",
+            error: "Mint status is no longer available. Please ask a staff member to review your artwork.",
+          };
+          saveKioskSession({ jobId, job: unavailable });
+          setJob(unavailable);
+        }
+      }
+    };
+
+    void poll();
+    if (job.stage === "confirmed") {
+      return () => { active = false; };
+    }
+
     const socket = io(`${kioskConfig.wsUrl.replace(/\/+$/, "")}/status`, {
       transports: ["websocket", "polling"],
       reconnection: true,
@@ -111,17 +149,6 @@ export function useMintJob(artwork: ArtworkExport | undefined, nickname: string 
     });
     socketRef.current = socket;
 
-    const update = (nextJob: MintJob) => {
-      if (active && nextJob.jobId === jobId) applyJob(nextJob);
-    };
-    const poll = async () => {
-      try {
-        update(await client.getStatus(jobId));
-      } catch {
-        // Socket updates can continue while the REST endpoint is briefly unavailable.
-      }
-    };
-
     socket.on("connect", () => {
       setIsConnected(true);
       socket.emit("subscribe", jobId);
@@ -129,7 +156,6 @@ export function useMintJob(artwork: ArtworkExport | undefined, nickname: string 
     socket.on("disconnect", () => setIsConnected(false));
     socket.on("connect_error", () => setIsConnected(false));
     socket.on("job", update);
-    void poll();
     const interval = window.setInterval(() => void poll(), 1_000);
 
     return () => {
@@ -139,7 +165,7 @@ export function useMintJob(artwork: ArtworkExport | undefined, nickname: string 
       socketRef.current = null;
       setIsConnected(false);
     };
-  }, [applyJob, artwork, client, job.jobId]);
+  }, [applyJob, client, job.error, job.jobId]);
 
   return { job, isSubmitting, isConnected, submit, retry };
 }

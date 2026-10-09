@@ -5,6 +5,7 @@ import { Draw } from "./pages/Draw";
 import { Nickname } from "./pages/Nickname";
 import { Progress } from "./pages/Progress";
 import { Certificate } from "./pages/Certificate";
+import { clearKioskSession } from "./hooks/useKioskSession";
 
 const screens = [
   { path: "/draw", label: "Draw", icon: Palette },
@@ -48,7 +49,7 @@ function FlowHeader() {
           </div>
         ))}
       </div>
-      <button className="reset-button" onClick={() => navigate("/")}>Reset</button>
+      <button className="reset-button" onClick={() => { clearKioskSession(); navigate("/"); }}>Reset</button>
     </header>
   );
 }
@@ -60,7 +61,7 @@ export default function App() {
     <div className="app-shell">
       <FlowHeader />
       <Routes>
-        <Route path="/" element={<Attract onStart={() => navigate("/draw")} />} />
+        <Route path="/" element={<Attract onStart={() => { clearKioskSession(); navigate("/draw"); }} />} />
         <Route path="/draw" element={<Draw />} />
         <Route path="/nickname" element={<Nickname />} />
         <Route path="/progress" element={<Progress />} />

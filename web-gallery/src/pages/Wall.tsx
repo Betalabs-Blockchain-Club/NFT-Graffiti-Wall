@@ -1,9 +1,30 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useGallerySocket } from "../hooks/useGallerySocket";
 import { GalleryGrid } from "../components/GalleryGrid";
 import { NewArtToast } from "../components/NewArtToast";
 import { AttractOverlay } from "../components/AttractOverlay";
 import { Radio, Tv, Layers, RefreshCw } from "lucide-react";
+import { readGalleryUrlState, writeGalleryUrlState } from "../lib/galleryUrlState";
+
+function useGalleryUrlState() {
+  const [state, setState] = useState(() => readGalleryUrlState(new URL(window.location.href)));
+
+  useEffect(() => {
+    const restoreFromUrl = () => setState(readGalleryUrlState(new URL(window.location.href)));
+    window.addEventListener("popstate", restoreFromUrl);
+    return () => window.removeEventListener("popstate", restoreFromUrl);
+  }, []);
+
+  const update = (patch: Partial<typeof state>) => {
+    const nextUrl = writeGalleryUrlState(new URL(window.location.href), patch);
+    if (nextUrl.href !== window.location.href) {
+      window.history.pushState(null, "", `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`);
+    }
+    setState(readGalleryUrlState(nextUrl));
+  };
+
+  return { ...state, update };
+}
 
 export const Wall: React.FC = () => {
   const {
@@ -16,7 +37,7 @@ export const Wall: React.FC = () => {
     refresh,
   } = useGallerySocket();
 
-  const [showAttract, setShowAttract] = useState<boolean>(false);
+  const { showAttract, selectedArtworkId, update: updateUrlState } = useGalleryUrlState();
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   const handleManualRefresh = async () => {
@@ -83,7 +104,7 @@ export const Wall: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setShowAttract((prev) => !prev)}
+            onClick={() => updateUrlState({ showAttract: !showAttract })}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-mono transition ${
               showAttract
                 ? "bg-pink-600 text-white border-pink-500 shadow-[0_0_15px_rgba(255,0,127,0.4)]"
@@ -100,14 +121,20 @@ export const Wall: React.FC = () => {
       <main className="flex-grow flex flex-col relative overflow-hidden">
         {showAttract ? (
           <AttractOverlay
-            onDismiss={() => setShowAttract(false)}
+            onDismiss={() => updateUrlState({ showAttract: false })}
             isDismissable={true}
           />
         ) : items.length === 0 ? (
           <AttractOverlay isDismissable={false} />
         ) : (
           <div className="flex-grow overflow-y-auto">
-            <GalleryGrid items={items} likesAvailable={likesAvailable} onLikeToggle={toggleLike} />
+            <GalleryGrid
+              items={items}
+              likesAvailable={likesAvailable}
+              onLikeToggle={toggleLike}
+              selectedArtworkId={selectedArtworkId}
+              onSelectedArtworkChange={(id) => updateUrlState({ selectedArtworkId: id })}
+            />
           </div>
         )}
       </main>
