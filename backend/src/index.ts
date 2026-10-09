@@ -66,7 +66,8 @@ app.use(createGalleryRouter({ storage, adminToken: env.ADMIN_TOKEN }));
 app.use(createAdminRouter({ storage, queue, adminToken: env.ADMIN_TOKEN, hooks: {
   onApproved: (item) => realtime.emitNew(item), onHidden: (id) => realtime.emitHide(id)
 } }));
-app.use(createVotesRouter({ storage }));
+app.use(createVotesRouter({ storage, rateLimitSecret: env.ADMIN_TOKEN, likeRateLimitPerMinute: env.LIKE_RATE_LIMIT_PER_MIN,
+  onLikeCount: ({ artworkId, likes }) => realtime.emitLikeCount(artworkId, likes) }));
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("backend request failed");
   if (res.headersSent) return;

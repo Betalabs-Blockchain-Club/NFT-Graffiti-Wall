@@ -26,8 +26,10 @@ npm run preview
 ```
 
 ## Environment Variables
-- `VITE_API_URL`: Backend REST URL (default: `http://localhost:3001`)
-- `VITE_WS_URL`: Backend Socket.IO URL (default: same as `VITE_API_URL`)
+- `VITE_API_URL`: URL of the shared backend REST API. Set this to the production backend origin in every deployed frontend build; the local default is `http://localhost:3001`.
+- `VITE_WS_URL`: Socket.IO URL for the same backend (defaults to `VITE_API_URL`).
 - `VITE_IPFS_GATEWAY`: IPFS gateway base URL (default: `https://ipfs.io/ipfs`)
+
+Gallery likes use this backend for both counts and writes. For deployment, set `VITE_API_URL` and `VITE_WS_URL` to the production backend, then configure backend `CORS_ORIGIN` to include this gallery's deployed origin (and every other deployed frontend origin that calls it). Set `LIKE_RATE_LIMIT_PER_MIN` to the per-browser write limit (default 60). Like counts and browser like state are read from the backend database; browser storage only retains the anonymous browser ID.
 - `VITE_VERIFY_URL`: Public verify site base URL (default: current host)
 - `VITE_KIOSK_URL`: Kiosk site base URL (optional)

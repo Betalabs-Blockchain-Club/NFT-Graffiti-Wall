@@ -74,7 +74,7 @@ export function createMockApi(options: MockApiOptions = {}) {
   const router = express.Router();
   const artworks = new Map<string, MockArtwork>();
   const timers = new Set<ReturnType<typeof setTimeout>>();
-  const galleryListeners = new Set<(event: "new" | "hide", payload: unknown) => void>();
+  const galleryListeners = new Set<(event: "new" | "hide" | "like-count", payload: unknown) => void>();
   const jobListeners = new Set<(job: MockMintJob) => void>();
   let nextTokenId = 1;
   let config: MockConfig = {
@@ -95,7 +95,7 @@ export function createMockApi(options: MockApiOptions = {}) {
     for (const listener of jobListeners) listener({ ...job });
   };
 
-  const emitGallery = (event: "new" | "hide", payload: unknown) => {
+  const emitGallery = (event: "new" | "hide" | "like-count", payload: unknown) => {
     for (const listener of galleryListeners) listener(event, payload);
   };
 
@@ -274,6 +274,34 @@ export function createMockApi(options: MockApiOptions = {}) {
     return res.json({ ok: true, archived });
   });
 
+  const likes = new Set<string>();
+  const browserIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  router.get("/api/likes", (req, res) => {
+    const browserId = String(req.query.browserId ?? "").toLowerCase();
+    if (!browserIdPattern.test(browserId)) return jsonError(res, 400, "invalid-input", "browserId must be a UUID v4");
+    const items = [...artworks.values()].filter((artwork) => artwork.status === "approved").map((artwork) => {
+      const prefix = `${artwork.item.id}|`;
+      const keys = [...likes].filter((key) => key.startsWith(prefix));
+      return { artworkId: artwork.item.id, likes: keys.length, likedByMe: likes.has(`${artwork.item.id}|${browserId}`) };
+    });
+    return res.json({ items });
+  });
+  router.post("/api/likes", (req, res) => {
+    const artworkId = typeof req.body?.artworkId === "string" ? req.body.artworkId.trim() : "";
+    const browserId = typeof req.body?.browserId === "string" ? req.body.browserId.toLowerCase() : "";
+    const liked = req.body?.liked;
+    if (!artworkId || artworkId.length > 128 || !browserIdPattern.test(browserId) || typeof liked !== "boolean") {
+      return jsonError(res, 400, "invalid-input", "Like requires artworkId, a UUID v4 browserId, and a boolean liked value");
+    }
+    const artwork = artworks.get(artworkId);
+    if (!artwork || artwork.status !== "approved") return jsonError(res, 404, "not-found", "Artwork is not available for liking");
+    const key = `${artworkId}|${browserId}`;
+    if (liked) likes.add(key); else likes.delete(key);
+    const count = [...likes].filter((entry) => entry.startsWith(`${artworkId}|`)).length;
+    emitGallery("like-count", { artworkId, likes: count });
+    return res.json({ artworkId, likes: count, likedByMe: liked });
+  });
+
   const votes = new Set<string>();
   router.post("/api/votes", (req, res) => {
     const artworkId = String(req.body.artworkId ?? "");
@@ -307,7 +335,7 @@ export function createMockApi(options: MockApiOptions = {}) {
     const status = io.of("/status");
     const subscriptions = new Map<SocketLike, Set<string>>();
 
-    const galleryListener = (event: "new" | "hide", payload: unknown) => gallery.emit(event, payload);
+    const galleryListener = (event: "new" | "hide" | "like-count", payload: unknown) => gallery.emit(event, payload);
     const jobListener = (job: MockMintJob) => {
       for (const [socket, jobs] of subscriptions) {
         if (jobs.has(job.jobId)) socket.emit("job", { ...job });

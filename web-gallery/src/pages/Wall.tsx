@@ -11,7 +11,8 @@ export const Wall: React.FC = () => {
     isConnected,
     latestNewItem,
     clearLatestNewItem,
-    hasLeaderboard,
+    likesAvailable,
+    toggleLike,
     refresh,
   } = useGallerySocket();
 
@@ -108,7 +109,7 @@ export const Wall: React.FC = () => {
           <AttractOverlay isDismissable={false} />
         ) : (
           <div className="flex-grow overflow-y-auto">
-            <GalleryGrid items={items} hasLeaderboard={hasLeaderboard} />
+            <GalleryGrid items={items} likesAvailable={likesAvailable} onLikeToggle={toggleLike} />
           </div>
         )}
       </main>

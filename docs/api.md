@@ -28,9 +28,17 @@ Returns `{ jobId, stage, tokenId?, txHash?, imageCID?, metadataCID?, retry?, err
 
 Returns `{ items: GalleryItem[], nextCursor: string | null }`. `status` defaults to `approved`; that public view requires no token. Other supported statuses (`pending`, `minted`, `hidden`) require `Authorization: Bearer <ADMIN_TOKEN>`. `limit` is a positive integer up to the storage layer's maximum (100); `cursor` is an opaque pagination cursor. `GalleryItem` contains `id`, optional `tokenId`, `nickname`, `imageCID`, `imageUrl` (`ipfs://<CID>`), `sha256` (hex without `0x`), `status`, and `createdAt`.
 
+### `GET /api/likes?browserId=<uuid-v4>` → `{ "items": [{ "artworkId", "likes", "likedByMe" }] }`
+
+Public, persistent gallery like counts and the current browser's state for approved artwork. Counts are calculated by the backend database.
+
+### `POST /api/likes` → `{ "artworkId", "likes", "likedByMe" }`
+
+JSON body: `{ "artworkId": string, "browserId": UUIDv4, "liked": boolean }`. Set `liked` to `true` or `false` to like/unlike; requests are idempotent, and SQLite's unique `(artwork_id, browser_id)` constraint prevents duplicate likes. Reads and writes are rate-limited in the persistent database by requester IP and, for writes, browser ID. Invalid input returns `400`, unavailable artwork returns `404`, and throttled clients receive `429` with `Retry-After`. A `like-count` event on `/gallery` broadcasts authoritative count changes.
+
 ### `POST /api/votes` → `201 { "ok": true }`
 
-JSON body: `{ "artworkId": string, "category": string, "voterKey": string }`. A duplicate `(artworkId, category, voterKey)` returns `409`; an unknown or non-approved artwork returns `404`. `GET /api/leaderboard` returns the stored aggregate. Vote submissions are not currently rate-limited by the backend.
+Legacy category votes use JSON `{ "artworkId": string, "category": string, "voterKey": string }`. A duplicate `(artworkId, category, voterKey)` returns `409`; an unknown or non-approved artwork returns `404`. `category: "like"` is reserved for `/api/likes`. `GET /api/leaderboard` returns legacy category aggregates.
 
 ## Admin (Bearer `ADMIN_TOKEN`)
 

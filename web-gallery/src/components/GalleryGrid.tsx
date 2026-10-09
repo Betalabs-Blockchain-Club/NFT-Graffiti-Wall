@@ -1,32 +1,30 @@
 import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { GalleryItem } from "../types";
-import { VoteBar } from "./VoteBar";
+import { LikeButton } from "./LikeButton";
 import { ArtworkImage } from "./ArtworkImage";
-import { Hash, Sparkles, X } from "lucide-react";
+import { Hash, Heart, Sparkles, X } from "lucide-react";
 
 interface GalleryGridProps {
   items: GalleryItem[];
-  hasLeaderboard: boolean;
+  likesAvailable: boolean;
+  onLikeToggle: (artworkId: string, liked: boolean) => Promise<void>;
 }
 
-export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, hasLeaderboard }) => {
+export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, likesAvailable, onLikeToggle }) => {
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
-  // Find max votes for scaling vote bars across the grid
-  const maxVotes = useMemo(() => {
-    let max = 1;
-    for (const item of items) {
-      if (item.votes && item.votes > max) {
-        max = item.votes;
-      }
-    }
-    return max;
-  }, [items]);
+  const newestItemId = useMemo(
+    () => items.reduce<GalleryItem | null>((newest, item) =>
+      !newest || new Date(item.createdAt).getTime() > new Date(newest.createdAt).getTime() ? item : newest, null)?.id,
+    [items]
+  );
+  const mostLikedItemId = items[0]?.likes && items[0].likes > 0 ? items[0].id : null;
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 md:gap-5 p-4 md:p-6">
-      {items.map((item, index) => {
-        const isNewest = index === 0;
+      {items.map((item) => {
+        const isNewest = item.id === newestItemId;
+        const isMostLiked = item.id === mostLikedItemId;
 
         return (
           <motion.div
@@ -37,12 +35,21 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, hasLeaderboard 
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.25 }}
             className={`group relative flex flex-col bg-[#11131e]/90 rounded-2xl border overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-[1.02] ${
-              isNewest
+              isMostLiked
+                ? "border-amber-300/80 shadow-[0_0_20px_rgba(251,191,36,0.22)] ring-1 ring-amber-300/50"
+                : isNewest
                 ? "border-pink-500/70 shadow-[0_0_20px_rgba(255,0,127,0.25)] ring-1 ring-pink-500/50"
                 : "border-slate-800/90 hover:border-slate-700 shadow-md"
             }`}
           >
-            {/* Top New badge on the freshest item */}
+            {isMostLiked && (
+              <div className="absolute top-2 left-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-300 text-slate-950 font-mono text-[10px] uppercase font-bold tracking-wider shadow-lg">
+                <Heart className="w-2.5 h-2.5 fill-current" />
+                <span>MOST LIKED</span>
+              </div>
+            )}
+
+            {/* NEW stays tied to the most recently created artwork. */}
             {isNewest && (
               <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full bg-pink-500 text-white font-mono text-[10px] uppercase font-bold tracking-wider shadow-lg animate-pulse">
                 <Sparkles className="w-2.5 h-2.5" />
@@ -89,10 +96,9 @@ export const GalleryGrid: React.FC<GalleryGridProps> = ({ items, hasLeaderboard 
                 )}
               </div>
 
-              {/* Vote bar rendered only when leaderboard responds */}
-              {hasLeaderboard && (
-                <VoteBar votes={item.votes} maxVotes={maxVotes} />
-              )}
+              {/* Counts and liked state are loaded from the backend likes API. */}
+              <LikeButton likes={item.likes} liked={item.likedByMe ?? false} disabled={!likesAvailable}
+                onToggle={(liked) => onLikeToggle(item.id, liked)} />
             </div>
           </motion.div>
         );

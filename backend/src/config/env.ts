@@ -20,6 +20,7 @@ const schema = z.object({
   MODERATION_MODE: z.enum(["display_after_approve", "mint_after_approve"]).default("display_after_approve"),
   MAX_IMAGE_KB: z.coerce.number().int().positive().default(500),
   RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(5),
+  LIKE_RATE_LIMIT_PER_MIN: z.coerce.number().int().min(1).max(10_000).default(60),
   KILL_SWITCH: z.string().default("false").transform((value, ctx) => {
     if (value !== "true" && value !== "false") {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "must be true or false" });

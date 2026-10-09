@@ -1,10 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { GalleryItem, LeaderboardEntry } from "../types";
+import { GalleryItem } from "../types";
+import { fetchLikeSummaries, getAnonymousBrowserId, setArtworkLike } from "../lib/likes";
 
 export const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001";
 export const WS_BASE = import.meta.env.VITE_WS_URL || API_BASE;
 export const IPFS_GATEWAY = (import.meta.env.VITE_IPFS_GATEWAY || "https://ipfs.io/ipfs").replace(/\/+$/, "");
+
+function sortByLikes(items: GalleryItem[]): GalleryItem[] {
+  return [...items].sort((a, b) =>
+    (b.likes ?? 0) - (a.likes ?? 0) ||
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
 
 function gatewayImageUrl(cid: string, gateway = IPFS_GATEWAY): string {
   const base = gateway.replace(/\/+$/, "");
@@ -42,7 +50,8 @@ export interface UseGallerySocketResult {
   isConnected: boolean;
   latestNewItem: GalleryItem | null;
   clearLatestNewItem: () => void;
-  hasLeaderboard: boolean;
+  likesAvailable: boolean;
+  toggleLike: (artworkId: string, liked: boolean) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -50,7 +59,8 @@ export function useGallerySocket(): UseGallerySocketResult {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [latestNewItem, setLatestNewItem] = useState<GalleryItem | null>(null);
-  const [hasLeaderboard, setHasLeaderboard] = useState<boolean>(false);
+  const [likesAvailable, setLikesAvailable] = useState<boolean>(false);
+  const [browserId] = useState(getAnonymousBrowserId);
 
   // Keep track of hidden IDs so fallback REST polls never revive a hidden item
   const hiddenIdsRef = useRef<Set<string>>(new Set());
@@ -60,44 +70,17 @@ export function useGallerySocket(): UseGallerySocketResult {
     setLatestNewItem(null);
   }, []);
 
-  // Fetch optional leaderboard
-  const fetchLeaderboard = useCallback(async (): Promise<Record<string, number> | null> => {
-    try {
-      const res = await fetch(`${API_BASE}/api/leaderboard`, {
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) {
-        setHasLeaderboard(false);
-        return null;
-      }
-      const data = await res.json();
-      if (!Array.isArray(data)) {
-        setHasLeaderboard(false);
-        return null;
-      }
-      setHasLeaderboard(true);
-      const voteMap: Record<string, number> = {};
-      for (const entry of data as LeaderboardEntry[]) {
-        if (entry.artworkId) {
-          voteMap[entry.artworkId] = entry.votes ?? 0;
-        }
-      }
-      return voteMap;
-    } catch {
-      setHasLeaderboard(false);
-      return null;
-    }
-  }, []);
-
   // Backfill items from REST API
   const backfill = useCallback(async () => {
     try {
-      const [galleryRes, voteMap] = await Promise.all([
+      const [galleryRes, likeSummaries] = await Promise.all([
         fetch(`${API_BASE}/api/gallery?status=approved`, {
           headers: { Accept: "application/json" },
         }).then((r) => (r.ok ? r.json() : null)),
-        fetchLeaderboard(),
+        fetchLikeSummaries(browserId).catch(() => null),
       ]);
+      setLikesAvailable(likeSummaries !== null);
+      const likeMap = new Map((likeSummaries ?? []).map((summary) => [summary.artworkId, summary]));
 
       const galleryItems = Array.isArray(galleryRes) ? galleryRes : galleryRes?.items;
       if (Array.isArray(galleryItems)) {
@@ -124,24 +107,29 @@ export function useGallerySocket(): UseGallerySocketResult {
           for (const item of approvedItems) {
             if (!hiddenIdsRef.current.has(item.id)) {
               const existing = itemMap.get(item.id);
-              const votes = voteMap?.[item.id] ?? existing?.votes ?? item.votes ?? 0;
+              const likeSummary = likeMap.get(item.id);
               itemMap.set(item.id, {
                 ...item,
-                votes,
+                likes: likeSummaries !== null ? likeSummary?.likes : existing?.likes,
+                likedByMe: likeSummaries !== null ? (likeSummary?.likedByMe ?? false) : (existing?.likedByMe ?? false),
               });
             }
           }
 
-          // Return array sorted by createdAt descending
-          return Array.from(itemMap.values()).sort(
-            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
+          return sortByLikes(Array.from(itemMap.values()));
         });
       }
     } catch (err) {
       console.warn("[web-gallery] REST backfill error:", err);
     }
-  }, [fetchLeaderboard]);
+  }, [browserId]);
+
+  const toggleLike = useCallback(async (artworkId: string, liked: boolean) => {
+    const update = await setArtworkLike(artworkId, browserId, liked);
+    setItems((current) => sortByLikes(current.map((item) => item.id === artworkId
+      ? { ...item, likes: update.likes, likedByMe: update.likedByMe }
+      : item)));
+  }, [browserId]);
 
   useEffect(() => {
     // Initial backfill
@@ -184,13 +172,14 @@ export function useGallerySocket(): UseGallerySocketResult {
         // Deduplicate by ID
         const exists = prev.some((it) => it.id === newItem.id);
         if (exists) {
-          return prev.map((it) => (it.id === newItem.id ? { ...it, ...newItem } : it));
+          return sortByLikes(prev.map((it) => (it.id === newItem.id ? { ...it, ...newItem, likes: it.likes, likedByMe: it.likedByMe } : it)));
         }
-        return [newItem, ...prev];
+        return sortByLikes([{ ...newItem, likes: undefined, likedByMe: false }, ...prev]);
       });
 
       // Trigger G2 NewArtToast / confetti spotlight
       setLatestNewItem(newItem);
+      void backfill();
     });
 
     // Handle hide event (instant removal with zero flicker)
@@ -199,6 +188,10 @@ export function useGallerySocket(): UseGallerySocketResult {
       hiddenIdsRef.current.add(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
       setLatestNewItem((current) => (current?.id === id ? null : current));
+    });
+
+    socket.on("like-count", ({ artworkId, likes }: { artworkId: string; likes: number }) => {
+      setItems((prev) => sortByLikes(prev.map((item) => item.id === artworkId ? { ...item, likes } : item)));
     });
 
     // REST poll fallback every 10s
@@ -218,7 +211,8 @@ export function useGallerySocket(): UseGallerySocketResult {
     isConnected,
     latestNewItem,
     clearLatestNewItem,
-    hasLeaderboard,
+    likesAvailable,
+    toggleLike,
     refresh: backfill,
   };
 }

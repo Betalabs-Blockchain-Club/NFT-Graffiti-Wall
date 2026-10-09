@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { QrCode } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { buildVerifyUrl } from "@graffiti/shared/qr";
@@ -13,16 +13,20 @@ type CertificateCardProps = {
 };
 
 export function CertificateCard({ artwork, nickname, job }: CertificateCardProps) {
-  const artworkUrl = useMemo(() => URL.createObjectURL(artwork.blob), [artwork.blob]);
+  const [artworkUrl, setArtworkUrl] = useState("");
   const verifyUrl = kioskConfig.verifyUrl ? buildVerifyUrl(kioskConfig.verifyUrl, job.tokenId!) : "";
   const mintedAt = new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date());
 
-  useEffect(() => () => URL.revokeObjectURL(artworkUrl), [artworkUrl]);
+  useEffect(() => {
+    const url = URL.createObjectURL(artwork.blob);
+    setArtworkUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [artwork.blob]);
 
   return (
     <section className="certificate-wrap">
       <div className="certificate-card" id="certificate-card">
-        <div className="certificate-artwork"><img src={artworkUrl} alt={`${nickname}'s graffiti`} /></div>
+        <div className="certificate-artwork"><img src={artworkUrl || undefined} alt={`${nickname}'s graffiti`} /></div>
         <div className="certificate-content">
           <div className="certificate-kicker">Graffiti Wall / proof of creation</div>
           <h1>{nickname}</h1>

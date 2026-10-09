@@ -22,6 +22,19 @@ CREATE TABLE IF NOT EXISTS votes (
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (artwork_id, category, voter_key)
 );
+CREATE TABLE IF NOT EXISTS likes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  artwork_id TEXT NOT NULL REFERENCES artworks(id),
+  browser_id TEXT NOT NULL CHECK(length(browser_id) = 36),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (artwork_id, browser_id)
+);
+CREATE TABLE IF NOT EXISTS api_rate_limits (
+  bucket_key TEXT PRIMARY KEY,
+  window_start INTEGER NOT NULL,
+  request_count INTEGER NOT NULL CHECK(request_count > 0)
+);
+CREATE INDEX IF NOT EXISTS api_rate_limits_window ON api_rate_limits(window_start);
 CREATE TABLE IF NOT EXISTS config (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL

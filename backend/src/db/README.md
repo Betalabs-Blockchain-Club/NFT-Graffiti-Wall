@@ -22,7 +22,8 @@ incorrect Bearer credentials return 401. The middleware does not expose the toke
 
 - `createStorage(pathOrDb)` executes `schema.sql`, enables foreign keys, seeds
   defaults without replacing existing config, and upgrades the original artwork
-  table with `archived_at` when necessary. Copy `schema.sql` alongside emitted DB
+  table with `archived_at` when necessary. The `likes` table is created for existing
+  and new databases with its unique per-artwork browser constraint. Copy `schema.sql` alongside emitted DB
   modules when assembling the production build; TypeScript does not copy SQL.
 - `insertArtwork({id, nickname, sha256, imageCID?, metadataCID?, createdAt?})`
   always creates pending artwork. Upload validation belongs to the upload issue.
@@ -47,6 +48,14 @@ incorrect Bearer credentials return 401. The middleware does not expose the toke
   The unique triple returns duplicate-vote (409) when repeated. `leaderboard()`
   returns an array of `{artworkId, category, votes}`, excluding hidden/archived
   artwork and omitting voter keys.
+- `setLike({artworkId, browserId, liked})` permits active approved artwork only,
+  and stores one like per UUIDv4 browser and artwork in the persistent `likes`
+  table. Its unique `(artwork_id, browser_id)` constraint makes repeated likes
+  idempotent; unlike removes that browser's row. `likeSummary(browserId)` returns
+  backend-calculated counts and whether that browser has liked each active item.
+- Like API request windows are stored in `api_rate_limits`; bucket identities are
+  HMACed, so per-browser and per-IP limits persist across backend restarts without
+  storing raw IP addresses.
 - `archiveAll()` marks active artwork as archived and records an audit batch,
   all in one transaction. Artwork, votes, and config remain in SQLite. Archived
   artwork cannot be remoderated, minted, or voted on through active methods.

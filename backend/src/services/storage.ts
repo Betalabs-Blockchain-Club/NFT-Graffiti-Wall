@@ -12,6 +12,7 @@ export interface MintedArtwork {
   id: string; tokenId: number; txHash: string; blockNumber: number; imageCID: string; metadataCID: string;
 }
 export interface VoteInput { artworkId: string; category: string; voterKey: string }
+export interface LikeInput { artworkId: string; browserId: string; liked: boolean }
 export interface ListOptions { status?: GalleryStatus; limit?: number; cursor?: string }
 
 export function createStorage(dbPathOrDb: string | Database.Database) {
@@ -33,6 +34,7 @@ export function createStorage(dbPathOrDb: string | Database.Database) {
   db.exec("CREATE INDEX IF NOT EXISTS artworks_gallery ON artworks(status, archived_at, created_at DESC, id DESC)");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS artworks_idempotency_key ON artworks(idempotency_key) WHERE idempotency_key IS NOT NULL");
   db.exec("CREATE INDEX IF NOT EXISTS votes_artwork ON votes(artwork_id)");
+  db.exec("CREATE INDEX IF NOT EXISTS likes_artwork ON likes(artwork_id)");
   db.transaction(() => {
     for (const [key, value] of Object.entries(DEFAULT_CONFIG)) {
       db.prepare("INSERT OR IGNORE INTO config(key,value) VALUES (?,?)").run(key, JSON.stringify(value));
@@ -163,6 +165,55 @@ export function createStorage(dbPathOrDb: string | Database.Database) {
         }
         throw error;
       }
+    },
+    likeSummary(browserId: string) {
+      requiredString(browserId, "browserId", 36);
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(browserId)) {
+        throw new StorageError("invalid-input", "browserId must be a UUID v4");
+      }
+      return db.prepare(`SELECT a.id AS artworkId,COUNT(l.id) AS likes,
+          MAX(CASE WHEN l.browser_id=? THEN 1 ELSE 0 END) AS likedByMe
+        FROM artworks a LEFT JOIN likes l ON l.artwork_id=a.id
+        WHERE a.archived_at IS NULL AND a.status='approved'
+        GROUP BY a.id ORDER BY a.created_at DESC,a.id DESC`).all(browserId.toLowerCase()) as
+        { artworkId: string; likes: number; likedByMe: number }[];
+    },
+    setLike(input: LikeInput) {
+      requiredString(input.artworkId, "artworkId", 128);
+      requiredString(input.browserId, "browserId", 36);
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.browserId)) {
+        throw new StorageError("invalid-input", "browserId must be a UUID v4");
+      }
+      if (typeof input.liked !== "boolean") throw new StorageError("invalid-input", "liked must be a boolean");
+      return db.transaction(() => {
+        if (getById(input.artworkId)?.status !== "approved") throw new StorageError("not-found", "Artwork is not available for liking", 404);
+        const browserId = input.browserId.toLowerCase();
+        if (input.liked) {
+          db.prepare("INSERT INTO likes(artwork_id,browser_id) VALUES (?,?) ON CONFLICT(artwork_id,browser_id) DO NOTHING")
+            .run(input.artworkId, browserId);
+        } else {
+          db.prepare("DELETE FROM likes WHERE artwork_id=? AND browser_id=?").run(input.artworkId, browserId);
+        }
+        const likes = (db.prepare("SELECT COUNT(*) AS count FROM likes WHERE artwork_id=?").get(input.artworkId) as { count: number }).count;
+        const liked = Boolean(db.prepare("SELECT 1 FROM likes WHERE artwork_id=? AND browser_id=?").get(input.artworkId, browserId));
+        return { artworkId: input.artworkId, likes, likedByMe: liked };
+      })();
+    },
+    consumeRateLimit(bucketKey: string, limit: number, now = Date.now()) {
+      if (!/^[a-f0-9]{64}$/.test(bucketKey) || !Number.isSafeInteger(limit) || limit < 1 || !Number.isSafeInteger(now)) {
+        throw new StorageError("invalid-input", "Invalid rate limit bucket");
+      }
+      const windowStart = Math.floor(now / 60_000) * 60_000;
+      return db.transaction(() => {
+        db.prepare("DELETE FROM api_rate_limits WHERE window_start < ?").run(windowStart);
+        db.prepare(`INSERT INTO api_rate_limits(bucket_key,window_start,request_count) VALUES (?,?,1)
+          ON CONFLICT(bucket_key) DO UPDATE SET window_start=excluded.window_start,
+            request_count=CASE WHEN api_rate_limits.window_start=excluded.window_start
+              THEN api_rate_limits.request_count+1 ELSE 1 END`).run(bucketKey, windowStart);
+        const { request_count: count } = db.prepare("SELECT request_count FROM api_rate_limits WHERE bucket_key=?")
+          .get(bucketKey) as { request_count: number };
+        return { allowed: count <= limit, retryAfterSeconds: Math.max(1, Math.ceil((windowStart + 60_000 - now) / 1000)) };
+      })();
     },
     leaderboard() {
       return db.prepare(`SELECT v.artwork_id AS artworkId,v.category,COUNT(*) AS votes FROM votes v
