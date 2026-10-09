@@ -18,7 +18,49 @@ export function VerifyToken() {
       if (active) setError(cause instanceof VerificationError ? cause : new VerificationError("chain", "Verification could not be completed."));
     }); return () => { active = false; };
   }, [config, tokenId]);
-  if (error) return <main className="page"><section className="error-card"><p className="eyebrow">{error.kind === "not-found" ? "NOT FOUND" : "VERIFICATION UNAVAILABLE"}</p><h1>{error.message}</h1><p>Check the QR code or try again when the chain and IPFS gateway are reachable.</p></section></main>;
-  if (!result) return <main className="page"><section className="loading-card"><span className="spinner" aria-hidden="true" /><h1>Checking token #{tokenId || "…"}</h1><p>{stageMessages[stage]}</p></section></main>;
-  return <main className="page"><div className="artwork"><img src={result.imageUrl} alt={`Artwork by ${result.nickname || "anonymous artist"}`} /></div><VerifyBadge result={result} />{result.verified && <><VerifiedDownloads result={result} /><TamperCanvas imageUrl={result.imageUrl} imageBytes={result.imageBytes} originalHash={result.onChainHash} /></>}</main>;
+  if (error)
+    return (
+      <main className="page">
+        <a className="verify-brand" href="/" aria-label="NFT Graffiti Wall home">
+          <img src="/logo.png" alt="NFT Graffiti Wall" />
+        </a>
+        <section className="error-card">
+          <p className="eyebrow">{error.kind === "not-found" ? "NOT FOUND" : "VERIFICATION UNAVAILABLE"}</p>
+          <h1>{error.message}</h1>
+          <p>Check the QR code or try again when the chain and IPFS gateway are reachable.</p>
+        </section>
+      </main>
+    );
+
+  if (!result)
+    return (
+      <main className="page">
+        <a className="verify-brand" href="/" aria-label="NFT Graffiti Wall home">
+          <img src="/logo.png" alt="NFT Graffiti Wall" />
+        </a>
+        <section className="loading-card">
+          <span className="spinner" aria-hidden="true" />
+          <h1>Checking token #{tokenId || "…"}</h1>
+          <p>{stageMessages[stage]}</p>
+        </section>
+      </main>
+    );
+
+  return (
+    <main className="page">
+      <a className="verify-brand" href="/" aria-label="NFT Graffiti Wall home">
+        <img src="/logo.png" alt="NFT Graffiti Wall" />
+      </a>
+      <div className="artwork">
+        <img src={result.imageUrl} alt={`Artwork by ${result.nickname || "anonymous artist"}`} />
+      </div>
+      <VerifyBadge result={result} />
+      {result.verified && (
+        <>
+          <VerifiedDownloads result={result} />
+          <TamperCanvas imageUrl={result.imageUrl} imageBytes={result.imageBytes} originalHash={result.onChainHash} />
+        </>
+      )}
+    </main>
+  );
 }
