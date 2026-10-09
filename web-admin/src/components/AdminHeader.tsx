@@ -9,7 +9,7 @@ interface AdminHeaderProps {
 export function AdminHeader({ page, onNavigate, onLock }: AdminHeaderProps) {
   return (
     <header className="topbar">
-      <a className="brand" href="#top" aria-label="Graffiti Wall moderation home"><span className="brand-mark">GW</span><span>Graffiti Wall <small>MODERATION</small></span></a>
+      <a className="brand" href="#top" aria-label="Graffiti Wall moderation home"><img className="brand-logo" src="/logo.png" alt="" /><span>Graffiti Wall <small>MODERATION</small></span></a>
       <nav className="admin-nav" aria-label="Admin sections">
         <button className={`admin-nav-link ${page === "queue" ? "is-active" : ""}`} aria-current={page === "queue" ? "page" : undefined} onClick={() => onNavigate("queue")}>Queue</button>
         <button className={`admin-nav-link ${page === "gallery" ? "is-active" : ""}`} aria-current={page === "gallery" ? "page" : undefined} onClick={() => onNavigate("gallery")}>Gallery</button>

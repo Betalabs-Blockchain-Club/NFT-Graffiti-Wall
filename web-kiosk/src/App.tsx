@@ -40,7 +40,7 @@ function FlowHeader() {
   const activeIndex = Math.max(0, screens.findIndex((screen) => screen.path === location.pathname));
   return (
     <header className="flow-header">
-      <button className="brand-mark" onClick={() => navigate("/")} aria-label="Return to attract screen">GW</button>
+      <button className="brand-mark" onClick={() => navigate("/")} aria-label="Return to attract screen"><img src="/logo.png" alt="" /></button>
       <div className="flow-steps" aria-label="Kiosk progress">
         {screens.map((screen, index) => (
           <div className={`flow-step ${index <= activeIndex ? "is-active" : ""}`} key={screen.path}>

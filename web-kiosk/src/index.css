@@ -118,6 +118,8 @@ h1 span { display: block; color: #d7ff4f; }
 .connection-note { color: #849087; font: 12px "DM Mono", monospace; }
 
 .certificate-screen { min-height: 100vh; padding: 132px 24px 64px; background: radial-gradient(circle at 22% 28%, #29443a, #101313 58%); }
+.attract-logo { position: absolute; top: 28px; left: 32px; width: 116px; height: 116px; object-fit: contain; }
+.brand-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .certificate-wrap { width: min(1080px, 100%); margin: 0 auto; }
 .certificate-card { display: grid; grid-template-columns: 330px 1fr 190px; align-items: center; gap: 36px; padding: 38px; border: 1px solid #65766b; background: #f4f1e8; color: #101313; box-shadow: 14px 14px 0 #d7ff4f; }
 .certificate-artwork { aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; background: #fffdf7; border: 1px solid #c5c5b9; }

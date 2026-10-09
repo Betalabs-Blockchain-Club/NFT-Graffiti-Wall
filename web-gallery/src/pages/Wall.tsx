@@ -3,7 +3,7 @@ import { useGallerySocket } from "../hooks/useGallerySocket";
 import { GalleryGrid } from "../components/GalleryGrid";
 import { NewArtToast } from "../components/NewArtToast";
 import { AttractOverlay } from "../components/AttractOverlay";
-import { Sparkles, Radio, Tv, Layers, RefreshCw } from "lucide-react";
+import { Radio, Tv, Layers, RefreshCw } from "lucide-react";
 
 export const Wall: React.FC = () => {
   const {
@@ -32,14 +32,12 @@ export const Wall: React.FC = () => {
         {/* Title & Brand */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-pink-500 to-cyan-400 flex items-center justify-center shadow-[0_0_15px_rgba(255,0,127,0.5)]">
-              <Sparkles className="w-5 h-5 text-black" />
-            </div>
+            <img src="/logo.png" alt="NFT Graffiti Wall" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-[0_0_14px_rgba(255,0,127,0.4)]" />
             <div>
-              <h1 className="text-xl font-black tracking-wider uppercase text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300">
+              <h1 className="text-2xl md:text-3xl font-black tracking-wider uppercase text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300">
                 NFT Graffiti Wall
               </h1>
-              <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase">
+              <p className="text-xs md:text-sm text-slate-300 font-mono tracking-widest uppercase">
                 Live Expo Broadcast • 1080p
               </p>
             </div>

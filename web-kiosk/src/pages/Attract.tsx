@@ -8,6 +8,7 @@ export function Attract({ onStart }: AttractProps) {
   return (
     <main className="attract-screen">
       <div className="attract-grid" aria-hidden="true" />
+      <img className="attract-logo" src="/logo.png" alt="NFT Graffiti Wall" />
       <div className="attract-copy">
         <motion.div
           className="eyebrow"

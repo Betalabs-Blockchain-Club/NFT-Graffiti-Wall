@@ -32,7 +32,7 @@ export default function App() {
   return (
     <main className="login-page">
       <section className="login-card">
-        <div className="brand-mark" aria-hidden="true">GW</div>
+        <img className="login-logo" src="/logo.png" alt="NFT Graffiti Wall" />
         <p className="eyebrow">STAFF ACCESS</p>
         <h1>Moderation desk</h1>
         <p className="muted">Enter the admin bearer token to review the wall queue.</p>
