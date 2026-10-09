@@ -55,9 +55,9 @@ h1, h2 { font-family: "Space Grotesk", sans-serif; letter-spacing: -.035em; }
 .art-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; padding-top: 22px; }
 .art-card { min-width: 0; overflow: hidden; border: 1px solid #333748; border-radius: 15px; background: #1a1d28; transition: border-color .18s, transform .18s; }
 .art-card:hover { transform: translateY(-2px); border-color: #50566a; }
-.art-preview { position: relative; height: 220px; display: grid; place-items: center; overflow: hidden; background: linear-gradient(135deg, #26283b, #191b25); }
-.art-preview img { width: 100%; height: 100%; object-fit: cover; }
-.preview-fallback { color: #888fa1; font-size: .85rem; }
+.art-preview { position: relative; height: 220px; display: grid; place-items: center; overflow: hidden; background: #ffffff; }
+.art-preview img { width: 100%; height: 100%; object-fit: contain; background: #ffffff; }
+.preview-fallback { color: #64736a; font-size: .85rem; }
 .status-pill { position: absolute; top: 12px; left: 12px; padding: 5px 9px; border: 1px solid #ffffff28; border-radius: 999px; color: #f5f6fa; background: #11131ac9; font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; backdrop-filter: blur(8px); }
 .status-pending { color: #ffe095; }
 .status-minted { color: #93ddff; }
