@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AdminHeader, type AdminPage } from "../components/AdminHeader";
 import { ApiError, archiveArtwork, listQueue } from "../lib/api";
 import { ArtworkPreview } from "../components/ArtworkPreview";
+import { ArtworkCertificate } from "../components/ArtworkCertificate";
 import type { GalleryItem } from "../types";
 
 interface GalleryProps {
@@ -17,6 +18,7 @@ export function Gallery({ token, onLock, onUnauthorized, onNavigate }: GalleryPr
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [certificateItem, setCertificateItem] = useState<GalleryItem | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -61,18 +63,38 @@ export function Gallery({ token, onLock, onUnauthorized, onNavigate }: GalleryPr
           : <section className="art-grid" aria-label="Published gallery artwork">
             {items.map((item) => <article className="art-card" key={item.id}>
               <div className="art-preview">
-                <ArtworkPreview item={item} />
+                <button className="card-art-open" type="button" onClick={() => setCertificateItem(item)} aria-label={`View certificate for ${item.nickname}`}>
+                  <ArtworkPreview item={item} />
+                </button>
                 <span className="status-pill status-approved">Published</span>
               </div>
               <div className="art-details">
-                <div className="creator-row"><span className="nickname">{item.nickname}</span>{item.tokenId != null && <span className="token-id">#{item.tokenId}</span>}</div>
+                <div className="creator-row">
+                  <span className="nickname" style={{ cursor: "pointer" }} onClick={() => setCertificateItem(item)}>{item.nickname}</span>
+                  {item.tokenId != null && (
+                    <button type="button" className="token-id" onClick={() => setCertificateItem(item)} aria-label={`View ticket for token #${item.tokenId}`}>
+                      #{item.tokenId}
+                    </button>
+                  )}
+                </div>
                 <p className="art-meta">Published {formatDate(item.createdAt)}</p>
                 <p className="art-cid" title={item.imageCID}>CID · {item.imageCID}</p>
-                <div className="card-actions"><button className="button button-danger" onClick={() => void remove(item)} disabled={Boolean(busyId)}>{busyId === item.id ? "Removing…" : "Permanently remove"}</button></div>
+                <div className="card-actions">
+                  <button className="button button-outline" type="button" onClick={() => setCertificateItem(item)}>View ticket</button>
+                  <button className="button button-danger" type="button" onClick={() => void remove(item)} disabled={Boolean(busyId)}>{busyId === item.id ? "Removing…" : "Permanently remove"}</button>
+                </div>
               </div>
             </article>)}
           </section>}
       <footer className="queue-footer">Permanently removed artwork is archived and no longer appears in the public gallery or admin queue.</footer>
+      {certificateItem && (
+        <ArtworkCertificate
+          item={certificateItem}
+          token={token}
+          onClose={() => setCertificateItem(null)}
+          onUnauthorized={onUnauthorized}
+        />
+      )}
     </main>
   );
 }

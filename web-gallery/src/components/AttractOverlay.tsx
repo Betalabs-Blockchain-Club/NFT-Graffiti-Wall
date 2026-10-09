@@ -34,25 +34,25 @@ export const AttractOverlay: React.FC<AttractOverlayProps> = ({
 
   return (
     <div
-      className={`flex flex-col items-center justify-center p-8 text-center max-w-4xl mx-auto my-auto ${
+      className={`flex flex-col items-center justify-center p-4 sm:p-8 text-center max-w-4xl mx-auto my-auto ${
         isDismissable ? "cursor-pointer" : ""
       }`}
       onClick={isDismissable ? onDismiss : undefined}
     >
       {/* Neon pill badge */}
-      <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-400 font-mono text-sm uppercase tracking-widest mb-6 animate-pulse">
-        <Sparkles className="w-4 h-4" />
+      <div className="inline-flex items-center gap-2 px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full bg-pink-500/10 border border-pink-500/30 text-pink-400 font-mono text-xs sm:text-sm uppercase tracking-widest mb-4 sm:mb-6 animate-pulse">
+        <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         <span>Live Expo Demonstration</span>
       </div>
 
       {/* Hero Headline */}
-      <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white mb-6 uppercase">
+      <h1 className="text-3xl sm:text-5xl md:text-7xl font-black tracking-tight text-white mb-4 sm:mb-6 uppercase">
         <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-400 to-cyan-400">
           Draw it. Mint it. Own it.
         </span>
       </h1>
 
-      <p className="text-lg md:text-2xl text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed font-light">
+      <p className="text-sm sm:text-lg md:text-2xl text-slate-300 max-w-2xl mx-auto mb-6 sm:mb-10 leading-relaxed font-light">
         Step up to the kiosk drawing tablet. Leave your tag on the collaborative
         wall, anchor its cryptographic fingerprint on-chain, and take home a
         verifiable NFT certificate.

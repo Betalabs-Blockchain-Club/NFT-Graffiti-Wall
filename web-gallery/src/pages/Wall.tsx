@@ -48,25 +48,25 @@ export const Wall: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0a0f] text-slate-100 select-none">
-      {/* Top Bar for 1080p Stage Display */}
-      <header className="sticky top-0 z-40 bg-[#0a0c14]/90 backdrop-blur-md border-b border-slate-800/80 px-6 py-3.5 flex items-center justify-between shadow-xl">
+      {/* Top Bar for Live Display / Mobile */}
+      <header className="sticky top-0 z-40 bg-[#0a0c14]/90 backdrop-blur-md border-b border-slate-800/80 px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xl">
         {/* Title & Brand */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="NFT Graffiti Wall" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-[0_0_14px_rgba(255,0,127,0.4)]" />
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="NFT Graffiti Wall" className="w-10 h-10 md:w-16 md:h-16 object-contain drop-shadow-[0_0_14px_rgba(255,0,127,0.4)]" />
             <div>
-              <h1 className="text-2xl md:text-3xl font-black tracking-wider uppercase text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300">
+              <h1 className="text-lg md:text-2xl font-black tracking-wider uppercase text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-300 to-cyan-300">
                 NFT Graffiti Wall
               </h1>
-              <p className="text-xs md:text-sm text-slate-300 font-mono tracking-widest uppercase">
-                Live Expo Broadcast • 1080p
+              <p className="text-[10px] md:text-xs text-slate-300 font-mono tracking-widest uppercase">
+                Live Expo Broadcast
               </p>
             </div>
           </div>
         </div>
 
         {/* Center Stats */}
-        <div className="flex items-center gap-6 font-mono text-xs">
+        <div className="hidden sm:flex items-center gap-3 md:gap-6 font-mono text-xs">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#141829] border border-slate-800">
             <Layers className="w-4 h-4 text-purple-400" />
             <span className="text-slate-400">Total Tags:</span>
@@ -92,7 +92,7 @@ export const Wall: React.FC = () => {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto sm:ml-0">
           <button
             onClick={handleManualRefresh}
             className="p-2 rounded-xl bg-[#141829] border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700 transition"
@@ -105,7 +105,7 @@ export const Wall: React.FC = () => {
 
           <button
             onClick={() => updateUrlState({ showAttract: !showAttract })}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-mono transition ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-mono transition ${
               showAttract
                 ? "bg-pink-600 text-white border-pink-500 shadow-[0_0_15px_rgba(255,0,127,0.4)]"
                 : "bg-[#141829] text-slate-300 border-slate-800 hover:border-slate-700"

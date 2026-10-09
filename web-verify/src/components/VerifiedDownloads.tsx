@@ -83,7 +83,7 @@ async function certificateFile(result: VerificationResult): Promise<File> {
     context.font = "600 24px sans-serif";
     context.fillText("Blockchain Club, Betalabs IIIT KOTTAYAM", rightX, 560);
 
-    const galleryUrl = import.meta.env.VITE_GALLERY_URL || "http://localhost:5174";
+    const galleryUrl = import.meta.env.VITE_GALLERY_URL || "https://nft-graffiti-wall-gallery.vercel.app/";
     context.fillStyle = "#aab6d5";
     context.font = "18px monospace";
     context.fillText(`Gallery: ${galleryUrl}`, 90, 710);

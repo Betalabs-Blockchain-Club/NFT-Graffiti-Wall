@@ -100,7 +100,7 @@ h1, h2 { font-family: "Space Grotesk", sans-serif; letter-spacing: -.035em; }
 .indicator-unknown, .indicator-neutral { background: #e2b75b; }
 .health-updated { margin: 10px 0 0; color: #81889a; font-size: .76rem; }
 .balance-alert { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 13px 15px; border: 1px solid #a94449; border-radius: 11px; color: #ffd3d1; background: #46272d; }
-.card-art-open { position: absolute; inset: 0; display: grid; place-items: center; width: 100%; padding: 0; overflow: hidden; border: 0; background: transparent; }
+.card-art-open { position: absolute; inset: 0; display: grid; place-items: center; width: 100%; padding: 0; overflow: hidden; border: 0; background: transparent; cursor: pointer; }
 .card-art-open img { pointer-events: none; }
 .certificate-modal-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow: auto; padding: 28px; background: #090b12d9; }
 .certificate-modal { position: relative; width: min(1080px, 100%); margin: auto; }
@@ -140,12 +140,12 @@ h1, h2 { font-family: "Space Grotesk", sans-serif; letter-spacing: -.035em; }
 .switch:disabled { opacity: .5; cursor: wait; }
 .setting-group { min-width: 0; margin: 19px 0 0; padding: 0; border: 0; }
 .setting-group legend { margin-bottom: 9px; color: #d4d7df; font-size: .8rem; font-weight: 700; }
-.choice-row { display: flex; gap: 8px; }
-.choice-button { min-height: 40px; padding: 8px 12px; border: 1px solid #3a3f4e; border-radius: 9px; color: #bbc0cd; background: #151821; font-size: .82rem; text-align: left; }
+.choice-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice-button { min-height: 40px; padding: 8px 12px; border: 1px solid #3a3f4e; border-radius: 99px; color: #bbc0cd; background: #151821; font-size: .82rem; text-align: left; }
 .choice-button:hover:not(:disabled) { border-color: #747b8e; color: #f3f4f8; }
 .choice-button.choice-selected { border-color: #84bd63; color: #ccf7b3; background: #263323; }
 .choice-stacked { display: grid; }
-.choice-stacked .choice-button { display: grid; gap: 4px; }
+.choice-stacked .choice-button { display: grid; gap: 4px; border-radius: 9px; }
 .choice-stacked small { color: #8b92a3; font-size: .73rem; }
 .setting-group:disabled .choice-button { opacity: .55; cursor: wait; }
 .setting-saving { margin: 14px 0 0; color: #b9efa0; font-size: .78rem; }
@@ -162,4 +162,25 @@ h1, h2 { font-family: "Space Grotesk", sans-serif; letter-spacing: -.035em; }
 .reset-button:disabled { opacity: .42; cursor: not-allowed; }
 .reset-error { margin: 0; color: #ffaaa7; font-size: .78rem; }
 @media (max-width: 900px) { .health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dashboard-grid { grid-template-columns: 1fr; } }
-@media (max-width: 600px) { .admin-nav { gap: 0; } .admin-nav-link { padding: 8px; font-size: .75rem; } .topbar { gap: 8px; } .topbar-actions { gap: 6px; } .section-heading { align-items: end; } .health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .health-card { min-height: 77px; gap: 8px; padding: 12px 9px; } .health-card strong { font-size: .78rem; } .health-card p { font-size: .67rem; } .balance-alert { align-items: flex-start; } .balance-alert b { font-size: .74rem; } }
+@media (max-width: 600px) {
+  .topbar { flex-wrap: wrap; gap: 10px 8px; min-height: auto; padding: 12px 0; }
+  .brand { gap: 6px; font-size: .85rem; }
+  .brand .brand-mark, .brand-logo { width: 40px; height: 40px; }
+  .brand small { font-size: .55rem; }
+  .admin-nav { display: flex; gap: 4px; max-width: 100%; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .admin-nav-link { padding: 6px 9px; font-size: .78rem; white-space: nowrap; flex-shrink: 0; }
+  .topbar-actions { gap: 6px; margin-left: auto; }
+  .queue-heading { flex-direction: column; align-items: flex-start; gap: 12px; padding: 24px 0 16px; }
+  .queue-heading-actions { width: 100%; justify-content: flex-start; gap: 8px; }
+  .queue-tabs { overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+  .queue-tab { padding: 10px 12px; font-size: .8rem; white-space: nowrap; flex-shrink: 0; }
+  .section-heading { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .health-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .health-card { min-height: 77px; gap: 8px; padding: 12px 9px; min-width: 0; }
+  .health-card strong { font-size: .78rem; word-break: break-word; }
+  .health-card p { font-size: .67rem; }
+  .balance-alert { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .balance-alert b { margin-left: 0; font-size: .74rem; word-break: break-all; }
+  .card-actions { grid-template-columns: 1fr; gap: 8px; }
+  .kill-switch { flex-direction: column; align-items: flex-start; }
+}
