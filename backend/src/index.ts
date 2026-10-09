@@ -1,5 +1,3 @@
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
 import { createServer } from "node:http";
 import express from "express";
 import cors from "cors";
@@ -15,22 +13,18 @@ import { createHealthRouter } from "./routes/health.js";
 import { createArtworksRouter } from "./routes/artworks.js";
 import { env } from "./config/env.js";
 
-if (env.databasePath !== ":memory:") mkdirSync(dirname(env.databasePath), { recursive: true });
-const storage = createStorage(env.databasePath);
-if (storage.getConfig("MODERATION_MODE") === "display_after_approve"
+const storage = createStorage(env.databaseUrl);
+await storage.ready;
+if (await storage.getConfig("MODERATION_MODE") === "display_after_approve"
   && env.MODERATION_MODE !== "display_after_approve") {
-  storage.setConfig({ MODERATION_MODE: env.MODERATION_MODE });
+  await storage.setConfig({ MODERATION_MODE: env.MODERATION_MODE });
 }
-if (storage.getConfig("IPFS_PROVIDER") === "pinata" && env.IPFS_PROVIDER !== "pinata") {
-  storage.setConfig({ IPFS_PROVIDER: env.IPFS_PROVIDER });
+if (await storage.getConfig("IPFS_PROVIDER") === "pinata" && env.IPFS_PROVIDER !== "pinata") {
+  await storage.setConfig({ IPFS_PROVIDER: env.IPFS_PROVIDER });
 }
-if (env.KILL_SWITCH) storage.setConfig({ KILL_SWITCH: true });
+if (env.KILL_SWITCH) await storage.setConfig({ KILL_SWITCH: true });
 
 const chain = createChain({ rpcUrl: env.RPC_URL, contractAddress: env.CONTRACT_ADDRESS, minterPrivateKey: env.MINTER_PRIVATE_KEY, expectedChainId: env.expectedChainId });
-const getIpfs = () => createIpfs({
-  provider: storage.getConfig("IPFS_PROVIDER"), pinataJwt: env.PINATA_JWT,
-  kuboApi: env.KUBO_API, gatewayUrl: env.IPFS_GATEWAY
-});
 const app = express();
 app.disable("x-powered-by");
 app.use(cors({ origin: env.corsOrigins }));
@@ -38,14 +32,14 @@ app.use(express.json({ limit: "1mb" }));
 const httpServer = createServer(app);
 const realtime = createRealtime(httpServer, { allowedOrigin: env.corsOrigins });
 const queue = createMintQueue({
-  ipfs: { pinImage: (bytes) => getIpfs().pinImage(bytes), pinMetadata: (metadata) => getIpfs().pinMetadata(metadata) },
+  ipfs: { pinImage: async (bytes) => createIpfs({ provider: await storage.getConfig("IPFS_PROVIDER"), pinataJwt: env.PINATA_JWT, kuboApi: env.KUBO_API, gatewayUrl: env.IPFS_GATEWAY }).pinImage(bytes), pinMetadata: async (metadata) => createIpfs({ provider: await storage.getConfig("IPFS_PROVIDER"), pinataJwt: env.PINATA_JWT, kuboApi: env.KUBO_API, gatewayUrl: env.IPFS_GATEWAY }).pinMetadata(metadata) },
   chain, storage, realtime: { onJob: (job) => realtime.emitJob(job.jobId, job) }
 });
 
 app.use(createHealthRouter({ checks: {
   chain: () => chain.ping(),
   ipfs: async () => {
-    const provider = storage.getConfig("IPFS_PROVIDER");
+    const provider = await storage.getConfig("IPFS_PROVIDER");
     const endpoint = provider === "pinata" ? "https://api.pinata.cloud/data/testAuthentication"
       : `${env.KUBO_API.replace(/\/$/, "").replace(/\/api\/v0$/, "")}/api/v0/id`;
     const response = await fetch(endpoint, {
@@ -83,7 +77,7 @@ async function stop(signal: string) {
     await realtime.close();
     queue.close();
     while (queue.getQueueDepth() > 0) await new Promise((resolve) => setTimeout(resolve, 100));
-    storage.close();
+    await storage.close();
     chain.provider.destroy();
   })();
   await shutdown;

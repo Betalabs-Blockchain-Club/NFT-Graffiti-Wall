@@ -19,7 +19,6 @@ type QueueOptions = {
 		setPinned?(id: string, imageCID: string, metadataCID: string): unknown | Promise<unknown>;
 		setMinted?(data: { id: string; tokenId: number; txHash: string; blockNumber: number; imageCID: string; metadataCID: string }): unknown | Promise<unknown>;
 		setStatus?(id: string, status: string): unknown | Promise<unknown>;
-		getById?(id: string): { nickname: string; sha256: string; imageCID: string | null; metadataCID: string | null; tokenId: number | null } | undefined;
 	};
 	realtime?: { onJob?(job: MintJob): void };
 	concurrency?: number;
@@ -140,13 +139,6 @@ export function createMintQueue(options: QueueOptions) {
 		getStatus(jobId: string): MintJob | undefined {
 			const job = jobs.get(jobId);
 			if (job) return { ...job };
-			const record = options.storage?.getById?.(jobId);
-			if (record?.imageCID && record.metadataCID && record.tokenId == null) {
-				const restored: MintJob = { jobId, stage: "ready", imageCID: record.imageCID, metadataCID: record.metadataCID };
-				prepared.set(jobId, { nickname: record.nickname, sha256: record.sha256, imageCID: record.imageCID, metadataCID: record.metadataCID });
-				jobs.set(jobId, restored);
-				return { ...restored };
-			}
 			return undefined;
 		},
 		async retryPin(jobId: string): Promise<MintJob> {

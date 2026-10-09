@@ -23,7 +23,7 @@ The **only trusted writer**: validates drawings, pins to IPFS, queues + retries 
 2. **IPFS service** (`services/ipfs.ts`): Pinata primary → Kubo fallback; pin image first, then metadata; return CIDs.
 3. **Queue** (`services/queue.ts`): in-memory/BullMQ FIFO, concurrency 1–2, exponential backoff 3 retries, idempotency by `jobId`, `/queue health` for admin.
 4. **Chain service** (`services/chain.ts`): ethers v6 signer, `mint()`, wait 1 conf, listen `ArtworkMinted` to backfill gallery.
-5. **DB** (`db/`): SQLite (`schema.sql`): `artworks, votes, config`. Gallery reads cache, not chain.
+5. **DB** (`db/`): Neon PostgreSQL (`schema.sql`): `artworks, votes, likes, config`. Gallery reads cache, not chain.
 6. **WS** (`ws/`): broadcast `new` (approved only) + `hide`; per-job progress.
 7. **Admin**: approve/hide/reset, `MODERATION_MODE` (`display_after_approve` vs `mint_after_approve`), `KILL_SWITCH` (stop new jobs, keep reads).
 8. **Votes**: off-chain, one per `(voterKey, category)`, leaderboard aggregate.
@@ -34,7 +34,7 @@ The **only trusted writer**: validates drawings, pins to IPFS, queues + retries 
 - Consumes contract ABI from `contracts/artifacts`; consumes `shared/src/types` (do not duplicate types).
 
 ## 6. Dependencies
-- Node 20, Express, ethers v6, Pinata SDK / kubo-rpc-client, sqlite (better-sqlite3), Socket.IO, zod.
+- Node 20, Express, ethers v6, Pinata SDK / kubo-rpc-client, PostgreSQL (`pg`), Socket.IO, zod.
 - Needs: contract address (from `contracts/`), IPFS reachable, minter funded with test POL on Amoy.
 
 ## 7. File layout

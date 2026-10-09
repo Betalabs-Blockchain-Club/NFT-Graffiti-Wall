@@ -16,7 +16,7 @@ const schema = z.object({
   PINATA_JWT: z.string().optional(),
   KUBO_API: z.string().url().default("http://localhost:5001"),
   IPFS_GATEWAY: z.string().url().default("https://gateway.pinata.cloud/ipfs/"),
-  DATABASE_URL: z.string().default("file:./data.db"),
+  DATABASE_URL: z.string().url().refine((value) => value.startsWith("postgres://") || value.startsWith("postgresql://"), "must be a PostgreSQL connection URL"),
   MODERATION_MODE: z.enum(["display_after_approve", "mint_after_approve"]).default("display_after_approve"),
   MAX_IMAGE_KB: z.coerce.number().int().positive().default(500),
   RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(5),
@@ -46,7 +46,5 @@ export const env = {
   ...parsed.data,
   expectedChainId: ({ "polygon-amoy": 80002, sepolia: 11155111, localhost: 31337 } as const)[parsed.data.CHAIN_NETWORK],
   corsOrigins: parsed.data.CORS_ORIGIN.split(",").map((origin) => origin.trim()).filter(Boolean),
-  databasePath: parsed.data.DATABASE_URL === ":memory:" ? ":memory:"
-    : resolve(repoRoot, parsed.data.DATABASE_URL.startsWith("file:")
-      ? parsed.data.DATABASE_URL.slice("file:".length) : parsed.data.DATABASE_URL)
+  databaseUrl: parsed.data.DATABASE_URL
 };

@@ -19,7 +19,7 @@ export function createAdminRouter({ storage, queue, adminToken, hooks }: AdminOp
   const router = Router();
   router.use("/api/admin", adminAuth(adminToken));
   router.post("/api/admin/artworks/:jobId/mint", route(async (req, res) => {
-    const existing = storage.getById(req.params.jobId);
+    const existing = await storage.getById(req.params.jobId);
     if (!existing) throw new StorageError("not-found", "Artwork not found", 404);
     if (existing.tokenId != null && existing.status === "approved") {
       return res.json({ item: toGalleryItem(existing) });
@@ -31,41 +31,41 @@ export function createAdminRouter({ storage, queue, adminToken, hooks }: AdminOp
     }
     const job = await queue.mint(req.params.jobId);
     if (job.stage !== "confirmed") throw new StorageError("mint-failed", job.error ?? "Mint transaction failed", 502);
-    const item = toGalleryItem(storage.getById(req.params.jobId)!);
+    const item = toGalleryItem((await storage.getById(req.params.jobId))!);
     await hooks.onApproved(item);
     res.json({ item, job });
   }));
-  router.get("/api/admin/artworks/:jobId/certificate", route((req, res) => {
-    const artwork = storage.getById(req.params.jobId);
+  router.get("/api/admin/artworks/:jobId/certificate", route(async (req, res) => {
+    const artwork = await storage.getById(req.params.jobId);
     if (!artwork || artwork.tokenId == null) throw new StorageError("not-found", "Minted artwork certificate data not found", 404);
-    res.json(storage.getCertificateDetails(req.params.jobId));
+    res.json(await storage.getCertificateDetails(req.params.jobId));
   }));
   router.post("/api/admin/artworks/:jobId/retry-ipfs", route(async (req, res) => {
-    const existing = storage.getById(req.params.jobId);
+    const existing = await storage.getById(req.params.jobId);
     if (!existing) throw new StorageError("not-found", "Artwork not found", 404);
     if (existing.status !== "pending") throw new StorageError("not-ready", "Only pending artwork can be retried", 409);
     const job = await queue.retryPin(req.params.jobId);
     res.json({ job });
   }));
   router.post("/api/admin/artworks/:jobId/hide", route(async (req, res) => {
-    const artwork = storage.setStatus(req.params.jobId, "hidden");
+    const artwork = await storage.setStatus(req.params.jobId, "hidden");
     await hooks.onHidden(artwork.id);
     res.json({ item: toGalleryItem(artwork) });
   }));
   router.post("/api/admin/artworks/:jobId/archive", route(async (req, res) => {
-    const archive = storage.archiveArtwork(req.params.jobId);
+    const archive = await storage.archiveArtwork(req.params.jobId);
     await hooks.onHidden(archive.id);
     res.json({ ok: true, archiveId: archive.archiveId, artworkCount: archive.artworkCount, voteCount: archive.voteCount });
   }));
   router.post("/api/admin/artworks/:jobId/restore", route(async (req, res) => {
-    const artwork = storage.getById(req.params.jobId);
+    const artwork = await storage.getById(req.params.jobId);
     if (!artwork) throw new StorageError("not-found", "Artwork not found", 404);
-    const item = toGalleryItem(storage.setStatus(req.params.jobId, artwork.tokenId == null ? "pending" : "approved"));
+    const item = toGalleryItem(await storage.setStatus(req.params.jobId, artwork.tokenId == null ? "pending" : "approved"));
     if (item.status === "approved") await hooks.onApproved(item);
     res.json({ item });
   }));
-  router.put("/api/admin/config", route((req, res) => {
-    res.json(storage.setConfig(req.body));
+  router.put("/api/admin/config", route(async (req, res) => {
+    res.json(await storage.setConfig(req.body));
   }));
   router.post("/api/admin/reset", route(async (req, res) => {
     const confirmation = `ARCHIVE ${new Date().toISOString().slice(0, 10)}`;
@@ -76,11 +76,11 @@ export function createAdminRouter({ storage, queue, adminToken, hooks }: AdminOp
     const ids: string[] = [];
     let cursor: string | undefined;
     do {
-      const page = storage.list({ status: "approved", limit: 100, cursor });
+      const page = await storage.list({ status: "approved", limit: 100, cursor });
       ids.push(...page.items.map((item) => item.id));
       cursor = page.nextCursor ?? undefined;
     } while (cursor);
-    const archive = storage.archiveAll();
+    const archive = await storage.archiveAll();
     // Attempt every notification even if one hook fails after the DB commit.
     const notified = await Promise.allSettled(ids.map((id) => Promise.resolve().then(() => hooks.onHidden(id))));
     if (notified.some((result) => result.status === "rejected")) throw new Error("Archive notification failed");
@@ -90,19 +90,19 @@ export function createAdminRouter({ storage, queue, adminToken, hooks }: AdminOp
     if (req.body?.confirm !== "CLEAR GALLERY") {
       throw new StorageError("invalid-confirmation", "Explicit gallery clear confirmation is required");
     }
-    const archive = storage.archiveByStatus("approved");
+    const archive = await storage.archiveByStatus("approved");
     const notified = await Promise.allSettled(archive.ids.map((id) => Promise.resolve().then(() => hooks.onHidden(id))));
     if (notified.some((result) => result.status === "rejected")) throw new Error("Gallery clear notification failed");
     res.json({ ok: true, archiveId: archive.archiveId, artworkCount: archive.artworkCount, voteCount: archive.voteCount });
   }));
-  router.post("/api/admin/clear-mint-requests", route((req, res) => {
+  router.post("/api/admin/clear-mint-requests", route(async (req, res) => {
     if (req.body?.confirm !== "CLEAR MINT REQUESTS") {
       throw new StorageError("invalid-confirmation", "Explicit mint request clear confirmation is required");
     }
     const requestIds: string[] = [];
     let cursor: string | undefined;
     do {
-      const page = storage.list({ status: "pending", limit: 100, cursor });
+      const page = await storage.list({ status: "pending", limit: 100, cursor });
       requestIds.push(...page.items.map((item) => item.id));
       cursor = page.nextCursor ?? undefined;
     } while (cursor);
@@ -112,7 +112,7 @@ export function createAdminRouter({ storage, queue, adminToken, hooks }: AdminOp
       const job = queue.getStatus(id);
       if (job?.stage === "minting" || !queue.cancel(id)) excludedIds.push(id);
     }
-    const archive = storage.archiveByStatus("pending", excludedIds);
+    const archive = await storage.archiveByStatus("pending", excludedIds);
     res.json({ ok: true, skippedMintingCount: excludedIds.length, archiveId: archive.archiveId,
       artworkCount: archive.artworkCount, voteCount: archive.voteCount });
   }));

@@ -19,12 +19,11 @@ export interface ArtworksOptions {
 export function createArtworksRouter({ storage, queue, maxImageKb, rateLimitPerMinute, deviceKey }: ArtworksOptions) {
   const router = Router();
   router.post("/", createRateLimit({ perMinute: rateLimitPerMinute, keyFn: deviceKey }), (req, res, next) => {
-    if (storage.getConfig("KILL_SWITCH")) {
+    void storage.getConfig("KILL_SWITCH").then((killSwitch) => { if (killSwitch) {
       res.status(503).json({ code: "kill-switch", message: "Minting is temporarily disabled" });
       return;
-    }
-    next();
-  }, createUploadMiddleware({ maxKb: maxImageKb }), (req, res, next) => {
+    } next(); }).catch(next);
+  }, createUploadMiddleware({ maxKb: maxImageKb }), async (req, res, next) => {
     try {
       const upload = req.upload;
       if (!upload) throw new Error("Upload validation did not produce an image");
@@ -32,23 +31,23 @@ export function createArtworksRouter({ storage, queue, maxImageKb, rateLimitPerM
       if (idempotencyKey && idempotencyKey.length > 128) {
         throw new StorageError("invalid-idempotency-key", "Idempotency key must be 128 characters or fewer", 400);
       }
-      const replay = (existing: ReturnType<Storage["getByIdempotencyKey"]>) => {
+      const replay = async (existing: Awaited<ReturnType<Storage["getByIdempotencyKey"]>>) => {
         if (!existing) return false;
         if (existing.sha256 !== upload.sha256.toLowerCase() || existing.nickname !== upload.nickname) {
           throw new StorageError("idempotency-conflict", "This submission key was already used for different artwork", 409);
         }
-        const active = storage.getById(existing.id);
+        const active = await storage.getById(existing.id);
         if (!active) throw new StorageError("submission-cleared", "This submission was already cleared by staff", 409);
         res.status(202).json({ jobId: active.id, status: active.status });
         return true;
       };
-      if (idempotencyKey && replay(storage.getByIdempotencyKey(idempotencyKey))) return;
+      if (idempotencyKey && await replay(await storage.getByIdempotencyKey(idempotencyKey))) return;
       const jobId = randomUUID();
       try {
-        storage.insertArtwork({ id: jobId, nickname: upload.nickname, sha256: upload.sha256, idempotencyKey });
+        await storage.insertArtwork({ id: jobId, nickname: upload.nickname, sha256: upload.sha256, idempotencyKey });
       } catch (error) {
-        if (idempotencyKey && (error as { code?: string }).code === "SQLITE_CONSTRAINT_UNIQUE"
-          && replay(storage.getByIdempotencyKey(idempotencyKey))) return;
+        if (idempotencyKey && ["23505", "SQLITE_CONSTRAINT_UNIQUE"].includes((error as { code?: string }).code ?? "")
+          && await replay(await storage.getByIdempotencyKey(idempotencyKey))) return;
         throw error;
       }
       queue.enqueue({ jobId, pngBytes: upload.bytes, nickname: upload.nickname, clientHash: upload.sha256 });
@@ -57,10 +56,10 @@ export function createArtworksRouter({ storage, queue, maxImageKb, rateLimitPerM
       next(error);
     }
   });
-  router.get("/:jobId/status", (req, res) => {
+  router.get("/:jobId/status", async (req, res) => {
     const job = queue.getStatus(req.params.jobId);
     if (job) return res.json(job);
-    if (!storage.getById(req.params.jobId)) return res.status(404).json({ code: "not_found", message: "Mint job not found" });
+    if (!await storage.getById(req.params.jobId)) return res.status(404).json({ code: "not_found", message: "Mint job not found" });
     return res.status(404).json({ code: "not_found", message: "Mint job status is unavailable" });
   });
   return router;

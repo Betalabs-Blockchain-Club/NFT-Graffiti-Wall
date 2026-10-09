@@ -17,7 +17,8 @@
     "test": "npm run test --workspaces",
     "mint:test": "node scripts/e2e-mint.js",
     "seed:wall": "node scripts/seed-wall.js",
-    "export:data": "node scripts/export-data.js"
+    "export:data": "node scripts/export-data.js",
+    "migrate:sqlite-to-neon": "node scripts/migrate-sqlite-to-postgres.mjs"
   },
   "allowScripts": {
     "better-sqlite3@11.10.0": true,

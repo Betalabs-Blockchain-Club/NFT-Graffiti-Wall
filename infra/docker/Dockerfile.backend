@@ -24,7 +24,7 @@ COPY --from=builder /app/backend/dist ./dist
 COPY backend/src/db/schema.sql ./dist/backend/src/db/schema.sql
 COPY package.json package-lock.json ./
 
-RUN mkdir -p data && chown -R appuser:appgroup /app
+RUN chown -R appuser:appgroup /app
 
 USER appuser
 

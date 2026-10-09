@@ -34,7 +34,7 @@ Public, persistent gallery like counts and the current browser's state for appro
 
 ### `POST /api/likes` → `{ "artworkId", "likes", "likedByMe" }`
 
-JSON body: `{ "artworkId": string, "browserId": UUIDv4, "liked": boolean }`. Set `liked` to `true` or `false` to like/unlike; requests are idempotent, and SQLite's unique `(artwork_id, browser_id)` constraint prevents duplicate likes. Reads and writes are rate-limited in the persistent database by requester IP and, for writes, browser ID. Invalid input returns `400`, unavailable artwork returns `404`, and throttled clients receive `429` with `Retry-After`. A `like-count` event on `/gallery` broadcasts authoritative count changes.
+JSON body: `{ "artworkId": string, "browserId": UUIDv4, "liked": boolean }`. Set `liked` to `true` or `false` to like/unlike; requests are idempotent, and PostgreSQL's unique `(artwork_id, browser_id)` constraint prevents duplicate likes. Reads and writes are rate-limited in the persistent database by requester IP and, for writes, browser ID. Invalid input returns `400`, unavailable artwork returns `404`, and throttled clients receive `429` with `Retry-After`. A `like-count` event on `/gallery` broadcasts authoritative count changes.
 
 ### `POST /api/votes` → `201 { "ok": true }`
 

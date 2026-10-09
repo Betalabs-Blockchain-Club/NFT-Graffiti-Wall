@@ -96,7 +96,7 @@ Design principles:
 - **Server holds minter key** — visitors never need a wallet.
 - **Artwork on IPFS, proof on chain** — `CID + hash + nickname + timestamp`.
 - **Verify page is static + trustless** — recomputes hash in browser, compares to on-chain value. No trust in backend.
-- **Gallery reads the SQLite cache** for speed; approved/hide changes are pushed over Socket.IO.
+- **Gallery reads the Neon PostgreSQL cache**; approved/hide changes are pushed over Socket.IO.
 - **Hash exact bytes** uploaded to IPFS. Client pre-computes, server recomputes and rejects mismatches. Never re-encode between hashing and upload.
 - **Retry transient failures** — the current queue is in memory and retries IPFS/chain calls up to three times; it is not a durable offline job store.
 - **Admin interface status** — authenticated moderation/config API routes exist; the `web-admin` UI is not implemented yet.
@@ -133,7 +133,7 @@ See root [`AGENT.md`](./AGENT.md) for agent boundaries, and each folder's `AGENT
 | IPFS | Pinata or local Kubo, with alternate-provider retry | Content-addressed storage |
 | Backend | Node + Express | Mint queue, moderation API, IPFS pinning, WS |
 | Realtime | Socket.IO / WS | Push to wall + kiosk progress |
-| DB | SQLite | Artwork and moderation cache, votes, config |
+| DB | Neon PostgreSQL | Artwork and moderation cache, votes, likes, config |
 | QR | `qrcode` / `qrcode.react` | Links to `verify.<domain>/#/token/37` |
 | Hosting | Verify + gallery static on Vercel/Netlify; backend on expo laptop or VPS | Public verification, local control |
 
@@ -205,6 +205,16 @@ NFT-Graffiti-Wall/
 
 ## 6. Quickstart
 
+### Render backend with Neon PostgreSQL
+
+The repository includes `render.yaml` for the backend container. Create a Neon project and database, copy its pooled connection string (including `sslmode=require`), then create a Render Blueprint from this repository. Fill the Blueprint's unsynced `DATABASE_URL`, `CONTRACT_ADDRESS`, `MINTER_PRIVATE_KEY`, `PINATA_JWT`, and `CORS_ORIGIN` values in Render. Set `CORS_ORIGIN` to the deployed kiosk, gallery, and admin origins. The backend writes no persistent local files.
+
+For an existing SQLite installation, first make a separate backup copy of `data.db`. From the repository root, set `DATABASE_URL` to the Neon URL and run `npm run migrate:sqlite-to-neon -- [path/to/data.db]`. The importer opens SQLite read-only, runs in a PostgreSQL transaction, and uses `ON CONFLICT DO NOTHING`; it never removes or overwrites source or destination rows. Review its inserted/skipped counts and compare table counts before changing the Render service to use Neon. Re-running is safe; skipped key conflicts should be investigated if the target was not already populated.
+
+Database schema setup is additive and runs on backend startup. It creates missing tables/indexes and adds missing artwork columns. The mint queue stays in process memory: if the Render instance idles, restarts, or deploys, queued job payloads and upload progress disappear, even though persisted artwork, likes, moderation, and vote records remain in Neon. Visitors may need to resubmit a job interrupted by a restart. Render documents a 30-day expiration for its free Postgres, so this setup uses Neon for persistent database storage.
+
+After Blueprint creation, provide the required unsynced secrets, confirm the health check passes, configure frontend `VITE_API_URL` and `VITE_WS_URL` to the Render service URL, and update CORS. This change does not deploy anything.
+
 This local path uses Docker for Hardhat + Kubo + backend; Node 20+, npm 10+, and Docker Compose are required. No testnet account or Pinata account is needed.
 
 ### 1. Clone, install, and configure
@@ -232,7 +242,7 @@ docker compose exec hardhat npx hardhat run scripts/deploy.ts --network localhos
 cat contracts/deployments/localhost.json
 ~~~
 
-Copy the deployment `address` into `.env` as `CONTRACT_ADDRESS` and `VITE_CONTRACT_ADDRESS`. Also set `VITE_RPC_URL=http://localhost:8545`, `VITE_IPFS_GATEWAY=http://localhost:8080/ipfs/`, `VITE_VERIFY_URL=http://localhost:5175`, and `DATABASE_URL=file:/app/data/data.db` (the Compose data volume is mounted at `/app/data`).
+Copy the deployment `address` into `.env` as `CONTRACT_ADDRESS` and `VITE_CONTRACT_ADDRESS`. Also set `VITE_RPC_URL=http://localhost:8545`, `VITE_IPFS_GATEWAY=http://localhost:8080/ipfs/`, `VITE_VERIFY_URL=http://localhost:5175`, and a PostgreSQL `DATABASE_URL`. Docker Compose starts a local PostgreSQL service and supplies its URL automatically.
 
 ### 3. Start the backend and check it
 
@@ -399,7 +409,7 @@ KUBO_API=http://localhost:5001
 IPFS_GATEWAY=https://gateway.pinata.cloud/ipfs/
 # Backend
 PORT=3001
-DATABASE_URL=file:./data.db
+DATABASE_URL=postgresql://user:password@host/dbname?sslmode=require
 MAX_IMAGE_KB=500
 RATE_LIMIT_PER_MIN=5
 KILL_SWITCH=false

@@ -11,7 +11,7 @@ export function createGalleryRouter({ storage, adminToken }: { storage: Storage;
     const status = req.query.status ?? "approved";
     if (status === "approved") next();
     else authorize(req, res, next);
-  }, route((req, res) => {
+  }, route(async (req, res) => {
     const status = req.query.status ?? "approved";
     const limit = req.query.limit === undefined ? 48 : Number(req.query.limit);
     if (typeof status !== "string" || !GALLERY_STATUSES.includes(status as GalleryStatus)
@@ -19,7 +19,7 @@ export function createGalleryRouter({ storage, adminToken }: { storage: Storage;
       || (req.query.cursor !== undefined && typeof req.query.cursor !== "string")) {
       throw new StorageError("invalid-query", "Invalid gallery query");
     }
-    res.json(storage.list({ status: status as GalleryStatus, limit, cursor: req.query.cursor as string | undefined }));
+    res.json(await storage.list({ status: status as GalleryStatus, limit, cursor: req.query.cursor as string | undefined }));
   }));
   return router;
 }

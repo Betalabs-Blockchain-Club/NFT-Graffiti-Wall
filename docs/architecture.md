@@ -5,7 +5,7 @@
 ```text
  Kiosk (untrusted browser) ── multipart PNG + nickname + SHA-256 ──┐
                                                                    ▼
- Gallery (read-only) ◄── REST + Socket.IO ── Backend API ── SQLite cache
+ Gallery (read-only) ◄── REST + Socket.IO ── Backend API ── Neon PostgreSQL
                                              │          │
                                              │          ├── exact PNG + metadata ──► IPFS
                                              │          └── mint + event ──────────► EVM chain
@@ -17,8 +17,8 @@
 ```
 
 1. The kiosk exports a PNG, hashes its exact bytes with SHA-256, and submits those same bytes with the nickname and hash.
-2. The backend validates file signature, size, nickname, and hash; creates a job and artwork record; pins the original bytes and metadata to IPFS; then asks the chain service to mint. The queue retries transient IPFS/chain failures up to three times. The job state is currently held in process memory; SQLite stores artwork/gallery state, not resumable queue payloads.
-3. The backend stores the confirmed token/CIDs/transaction in SQLite. Moderation determines whether the artwork waits in `minted` or becomes `approved`. Approved and hidden changes are broadcast to the gallery. Kiosk progress is pushed over Socket.IO and can be recovered by polling the status endpoint while the process retains the job.
+2. The backend validates file signature, size, nickname, and hash; creates a job and artwork record; pins the original bytes and metadata to IPFS; then asks the chain service to mint. The queue retries transient IPFS/chain failures up to three times. The job state is currently held in process memory; PostgreSQL stores artwork/gallery state, not resumable queue payloads.
+3. The backend stores the confirmed token/CIDs/transaction in PostgreSQL. Moderation determines whether the artwork waits in `minted` or becomes `approved`. Approved and hidden changes are broadcast to the gallery. Kiosk progress is pushed over Socket.IO and can be recovered by polling the status endpoint while the process retains the job.
 4. The certificate QR links to `web-verify/#/token/{tokenId}`. The verify page reads the artwork hash from the contract, downloads image bytes from an IPFS gateway, recomputes SHA-256, and compares locally. It does not call the backend.
 
 ## Trust boundaries
@@ -27,7 +27,7 @@
 - **Backend is trusted to validate, pin, submit transactions, and moderate, but is not the verification authority.** It holds the minter key and Pinata credential. Admin routes require `Authorization: Bearer <ADMIN_TOKEN>`; public health and approved-gallery reads do not.
 - **The EVM contract is the source for the token's recorded nickname, image CID, artwork hash, timestamp, and ownership.** The chain cannot prove that the original submitted pixels were appropriate or that a trusted operator reviewed them.
 - **IPFS provides content-addressed bytes, not guaranteed availability or correctness.** Gateways can fail or be censored. Verification only succeeds when the fetched bytes hash to the on-chain value.
-- **SQLite is a backend gallery/moderation cache, not independent proof.** A backend restart preserves artwork records, but the current in-memory mint queue/status map is not a durable job system.
+- **Neon PostgreSQL is a backend gallery/moderation cache, not independent proof.** A backend restart preserves artwork records, likes, moderation, and votes, but loses in-memory queue payloads, stages, retries, and upload bytes. An interrupted job may need to be resubmitted.
 - **Socket.IO is a best-effort notification channel, not durable history or authorization.** Clients poll REST for current job status and refetch gallery pages after reconnecting.
 
 ## Failure and operating behavior
